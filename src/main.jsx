@@ -1,15 +1,12 @@
-// src/main.jsx (FINAL UX VERSION)
 import React, { Suspense, lazy } from "react"; 
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
-// We no longer need to import the spinner here
-// import LoadingSpinner from "./components/LoadingSpinner"; 
 
 // Lazily import the main App component
 const LazyApp = lazy(() => import("./App.jsx")); 
 
-// (Keep all your page imports as lazy)
+// Lazily import all page components
 const HomePage = lazy(() => import("./pages/HomePage.jsx"));
 const SpotDetailsPage = lazy(() => import("./pages/SpotDetailsPage.jsx"));
 const AmbassadorProfilePage = lazy(() => import("./pages/AmbassadorProfilePage.jsx"));
@@ -52,8 +49,8 @@ const router = createBrowserRouter([
 // Render the app
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-     {/* 💥 FIX: We use 'null' as the fallback. This ensures your app's fast-loading HTML structure 
-     (header, nav) appears immediately, making the app feel instant. */}
+     {/* Use 'null' as the fallback to make the app feel instant.
+         Your App.jsx and page skeletons will handle the visual loading. */}
      <Suspense fallback={null}> 
         <RouterProvider router={router} />
      </Suspense>

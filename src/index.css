@@ -1,9 +1,17 @@
 @import "tailwindcss";
 @layer utilities {
   html,
-body {
+body,
+#root { /* 💡 FIX: Added #root here */
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
+
+  /* 💡 FIX: 
+    These two lines fix the "white flash" on page transitions 
+    and prevent any horizontal scroll.
+  */
+  background-color: #0a0a0a;
+  overflow-x: hidden;
 }
 
 input,
@@ -21,7 +29,7 @@ select {
 }
 
 
-/* Hide horizontal scrollbar on ambassador carousel */
+/* Your existing scrollbar utils (Unchanged) */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -29,11 +37,11 @@ select {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-/* Hide scrollbar but keep scrolling */
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
+

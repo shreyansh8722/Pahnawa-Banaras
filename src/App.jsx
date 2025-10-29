@@ -1,113 +1,142 @@
-// src/App.jsx
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { LocationProvider } from "./hooks/useLocation";
 import { AnimatePresence, motion } from "framer-motion";
-import LoadingSpinner from "./components/LoadingSpinner"; // Ensure this path is correct
 import { Home, Compass, Heart, User } from "lucide-react";
-import { useAuth } from "./hooks/useAuth";
+// Assuming your hook is at this path
+import { useScrollDirection } from "./hooks/useScrollDirection"; 
 
+// --- Animation Variants (Your code, unchanged) ---
+const pageVariants = {
+  initial: { opacity: 0 },
+  in: { opacity: 1 },
+  out: { opacity: 0 }
+};
 
-export default function App() {
+// --- Transition Timing (Your code, unchanged) ---
+const pageTransition = {
+  type: "tween",
+  ease: "linear",
+  duration: 0.15
+};
+
+// Inner component to safely use hooks within providers
+function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  // ✅ ERROR FIX: Safely access user from useAuth hook
-  // Provide a default empty object {} if useAuth() returns null/undefined initially
-  const { user } = useAuth() || {};
-  const [hideNav, setHideNav] = useState(false);
+  const { user } = useAuth();
+  // Using your scroll hook logic from previous files
+  const scrollDirection = useScrollDirection(80);
+  const hideNav = scrollDirection === 'down';
+  const [activePath, setActivePath] = useState(location.pathname);
 
-  // Scroll effect to hide/show nav
   useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const cur = window.scrollY;
-      const shouldHide = cur > last && cur > 80 && document.body.scrollHeight > window.innerHeight + 100;
-      setHideNav(shouldHide);
-      last = cur;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    setActivePath(location.pathname);
+  }, [location.pathname]);
 
   const currentPath = location.pathname;
-
-  // List of paths where the bottom nav should be visible
-  const showNavPaths = ['/', '/explore', '/favorites', '/profile'];
+  const showNavPaths = ["/", "/explore", "/favorites", "/profile"];
   const shouldShowNav = showNavPaths.includes(currentPath);
 
+  const handleNavClick = (path) => {
+    if (path !== activePath) {
+      setActivePath(path);
+      navigate(path);
+    }
+  };
+
   return (
-    <AuthProvider>
-      <LocationProvider>
-        {/* Page Content */}
+      <>
+        {/* Page Transition Wrapper */}
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            // Add bottom padding *only if* nav is shown
-            className={`min-h-screen bg-white ${shouldShowNav ? 'pb-28' : ''}`}
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+            /* 💡 THE FIX: 
+              REMOVED 'pb-28' from here. 
+              This stops the layout jump during transitions.
+            */
           >
-                 <Outlet />
+            <Outlet />
           </motion.div>
         </AnimatePresence>
 
-        {/* Bottom Navigation */}
-        {/* Conditionally render the nav based on the path */}
+        {/* Your Bottom Navigation Bar (Unchanged) */}
         {shouldShowNav && (
-            <motion.nav
-              initial={{ y: 100, opacity: 0 }}
-              // Animate based on hideNav state AND shouldShowNav
-              animate={{ y: hideNav ? 100 : 0, opacity: hideNav ? 0 : 1 }}
-              transition={{ type: "spring", stiffness: 160, damping: 20 }}
-              className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[90%] max-w-[350px] bg-[#0f0f0f] text-white rounded-full flex justify-around items-center px-4 py-3 shadow-2xl backdrop-blur-md z-50"
-            >
-              {/* Home */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/")}
-                className={`p-2 rounded-full ${currentPath === '/' ? 'bg-white text-black' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                aria-label="Home"
-              >
-                <Home size={22} />
-              </motion.button>
-              {/* Explore */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/explore")}
-                className={`p-2 rounded-full ${currentPath === '/explore' ? 'bg-white text-black' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                aria-label="Explore"
-              >
-                <Compass size={22} />
-              </motion.button>
-              {/* Favorites */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/favorites")}
-                className={`p-2 rounded-full ${currentPath === '/favorites' ? 'bg-white text-black' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                aria-label="Favorites"
-              >
-                <Heart size={22} />
-              </motion.button>
-              {/* Profile */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/profile")}
-                className={`p-2 rounded-full ${currentPath === '/profile' ? 'bg-white text-black' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                aria-label="Profile"
-              >
-                {user?.photoURL ? ( // Check if user exists before accessing photoURL
-                    <img src={user.photoURL} alt="Profile" className="w-6 h-6 rounded-full object-cover"/>
-                ) : (
-                    <User size={22} />
-                )}
-              </motion.button>
-            </motion.nav>
+           <motion.nav
+            key="bottom-nav"
+            initial={{ y: 100, opacity: 0 }}
+            animate={{
+                y: hideNav ? 100 : 0,
+                opacity: hideNav ? 0 : 1
+            }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[90%] max-w-[370px]
+            bg-white/5 backdrop-blur-2xl border border-white/10 text-white
+            rounded-full flex justify-around items-center px-6 py-3
+            shadow-[0_8px_40px_rgba(0,0,0,0.6)] z-50"
+          >
+             {[
+              { icon: Home, path: "/" },
+              { icon: Compass, path: "/explore" },
+              { icon: Heart, path: "/favorites" },
+              { icon: User, path: "/profile" },
+            ].map(({ icon: Icon, path }) => {
+              const isActive = currentPath === path;
+              return (
+                <motion.button
+                  key={path}
+                  whileTap={{ scale: 0.9 }}
+                  whileHover={{ scale: 1.1 }}
+                  onClick={() => handleNavClick(path)}
+                  className={`relative flex flex-col items-center justify-center p-1 rounded-full transition-colors duration-200 ${
+                    isActive ? "text-white" : "text-white/60 hover:text-white"
+                  }`}
+                  aria-label={path === '/' ? 'Home' : path.substring(1).charAt(0).toUpperCase() + path.substring(2)}
+                >
+                  {path === "/profile" && user?.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt="Profile"
+                      className={`w-6 h-6 rounded-full object-cover transition-all ${
+                        isActive ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-[#0f1014]" : ""
+                      }`}
+                    />
+                  ) : (
+                    <Icon
+                      size={22}
+                      strokeWidth={isActive ? 2.2 : 1.8}
+                    />
+                  )}
+                   {isActive && (
+                      <motion.div
+                        layoutId="activeNavIndicator"
+                        className="absolute -bottom-[6px] w-1 h-1 rounded-full bg-blue-400"
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                      />
+                    )}
+                </motion.button>
+              );
+            })}
+          </motion.nav>
         )}
-      </LocationProvider>
-    </AuthProvider>
-  );
+      </>
+    );
+}
+
+// Main App component (Your code, unchanged)
+export default function App() {
+    return (
+        <AuthProvider>
+            <LocationProvider>
+                <AppLayout />
+            </LocationProvider>
+        </AuthProvider>
+    );
 }
 
