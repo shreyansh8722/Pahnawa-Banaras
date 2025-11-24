@@ -1,0 +1,36 @@
+@import "tailwindcss"; 
+@variant dark (&:where(.dark, .dark *));
+
+
+@layer base {
+  html {
+    @apply font-sans antialiased; /* Apply Inter font & smoothing */
+    /* Ensure background color applies correctly BEFORE hydration */
+    @apply bg-gray-50 dark:bg-gray-900;
+    
+  }
+  body {
+     
+     -webkit-text-size-adjust: 100%;
+     touch-action: manipulation;
+     overflow-x: hidden; /* Prevent horizontal scroll */
+     @apply bg-gray-50 dark:bg-gray-900; /* Reiterate for specificity */
+     @apply text-gray-900 dark:text-gray-100; /* Default text colors */
+  }
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* custom utilities below */
+@layer utilities {
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}

@@ -1,0 +1,1 @@
+import{r as t,j as c}from"./index-CLPTGE9i.js";import{o as i,c as x}from"./firebase-Cjf02rEj.js";const e=t.createContext(null);function d({children:s}){const[u,n]=t.useState(null),[r,o]=t.useState(!0);return t.useEffect(()=>i(x,a=>{n(a),o(!1)}),[]),c.jsx(e.Provider,{value:{user:u,loading:r},children:s})}function m(){return t.useContext(e)}export{d as A,m as u};
