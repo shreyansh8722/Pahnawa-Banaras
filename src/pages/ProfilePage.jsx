@@ -53,7 +53,6 @@ export default function ProfilePage() {
   };
   
   const handleAdminClick = () => {
-      console.log("Navigating to admin..."); // Debug log
       navigate('/admin');
   };
 
@@ -89,12 +88,12 @@ export default function ProfilePage() {
 
             <div className="bg-white rounded-sm shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               
-              {/* ADMIN LINK - Only shows if email matches */}
+              {/* ADMIN LINK - Visible immediately */}
               {user.email === ADMIN_EMAIL && (
                 <button 
                   type="button"
                   onClick={handleAdminClick}
-                  className="w-full flex items-center justify-between p-4 text-sm font-bold text-white bg-brand-dark hover:bg-black transition-colors cursor-pointer z-10 relative"
+                  className="w-full flex items-center justify-between p-4 text-sm font-bold text-white bg-gray-900 hover:bg-black transition-colors cursor-pointer z-10 relative mb-1"
                 >
                   <div className="flex items-center gap-3 pointer-events-none">
                       <Shield size={18} /> Admin Dashboard
