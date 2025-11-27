@@ -109,7 +109,9 @@ export default function ProductDetailsPage() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 mb-10 px-0 md:px-8 pt-0 md:pt-6">
+      {/* Main Grid - Added pb-24 for mobile sticky bar clearance */}
+      <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 mb-10 px-0 md:px-8 pt-0 md:pt-6 pb-24 md:pb-0">
+        
         {/* GALLERY */}
         <div className="md:col-span-7 w-full">
           <ProductGallery images={images} name={product.name} />
@@ -139,8 +141,8 @@ export default function ProductDetailsPage() {
             <ProductOffers />
             <ProductCustomization options={customizations} onOptionsChange={setCustomizations} />
             
-            {/* --- ACTIONS: Visible on both Desktop AND Mobile --- */}
-            <div className="flex gap-4 mb-8 mt-8 items-stretch">
+            {/* --- DESKTOP ACTIONS --- */}
+            <div className="hidden md:flex gap-4 mb-8 mt-8 items-stretch">
               <button 
                 onClick={handleAddToCart} 
                 className="flex-1 bg-white border border-black text-black py-4 text-xs font-bold uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2"
@@ -167,10 +169,25 @@ export default function ProductDetailsPage() {
         </div>
       </div>
 
+      {/* --- MOBILE STICKY ACTION BAR --- */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-100 z-40 flex gap-3 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1)] pb-safe">
+          <button 
+            onClick={handleAddToCart} 
+            className="flex-1 bg-white border border-gray-300 text-gray-900 py-3 text-xs font-bold uppercase tracking-widest rounded-sm"
+          >
+            Add to Bag
+          </button>
+          <button 
+            onClick={handleBuyNow} 
+            className="flex-1 bg-[#B08D55] text-white py-3 text-xs font-bold uppercase tracking-widest rounded-sm shadow-md"
+          >
+            Buy Now
+          </button>
+      </div>
+
       {/* RECOMMENDATIONS */}
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 w-full border-t border-gray-100 pt-10 pb-20">
           <ProductRecommendations title="You May Also Like" category={product.subCategory || product.category} currentProductId={product.id} type="related" />
-          <ProductRecommendations title="Our Bestsellers" type="bestseller" currentProductId={product.id} />
       </div>
 
       {/* TOAST */}
@@ -180,9 +197,9 @@ export default function ProductDetailsPage() {
             initial={{ opacity: 0, y: 50 }} 
             animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0, y: 50 }} 
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1000] bg-green-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 pointer-events-none"
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 pointer-events-none"
           >
-            <Check size={16} /> <span className="text-sm font-medium">Added to Bag</span>
+            <Check size={16} className="text-green-400" /> <span className="text-sm font-medium">Added to Bag</span>
           </motion.div>
         )}
       </AnimatePresence>

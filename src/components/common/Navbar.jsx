@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Search, Menu, User, Heart, X, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Search, Menu, User, Heart, X, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Changed NavLink to Link
 import { useFavorites } from '@/hooks/useFavorites';
 import { useCart } from '@/context/CartContext';
 import Logo from '../../assets/logo.png'; 
@@ -9,47 +9,26 @@ import Logo from '../../assets/logo.png';
 export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation(); // To check current URL
   
   const { cartCount, openCart } = useCart();
   const { favorites } = useFavorites();
   const favCount = favorites ? favorites.length : 0;
 
-  // Precise Active State Logic for Gold Strip
-  const isActive = (link) => {
-    const currentPath = location.pathname;
-    const currentSearch = location.search;
-
-    if (link === '/') return currentPath === '/' && !currentSearch;
-
-    if (link.includes('?')) {
-      const [linkPath, linkQueryString] = link.split('?');
-      const linkParams = new URLSearchParams(linkQueryString);
-      const currentParams = new URLSearchParams(currentSearch);
-      // Check if path matches AND category param matches
-      return currentPath === linkPath && linkParams.get('cat') === currentParams.get('cat');
-    }
-    
-    return currentPath === link;
+  // Helper to check if a link is active based on Query Params
+  const isLinkActive = (link) => {
+    return location.pathname + location.search === link;
   };
 
   const navLinks = [
-    { name: 'HOME', link: '/' },
-    { name: 'SAREES', link: '/shop?cat=sarees' },
-    { name: 'LEHENGAS', link: '/shop?cat=lehengas' },
+    { name: 'SAREES', link: '/shop?cat=saree' },
+    { name: 'LEHENGAS', link: '/shop?cat=lehenga' },
+    { name: 'SUITS', link: '/shop?cat=suit' },
     { name: 'DUPATTAS', link: '/shop?cat=dupatta' },
-    { name: 'SUITS', link: '/shop?cat=suits' },
-    { name: 'FABRICS', link: '/shop?cat=fabrics' },
-    { name: 'COLLECTIONS', link: '/shop?cat=all' },
+    { name: 'FABRICS', link: '/shop?cat=fabric' },
   ];
 
-  const metaLinks = [
-    { name: 'OUR STORY', link: '/about' },
-    { name: 'CONTACT US', link: '/contact' },
-  ];
-
-  const tapAnimation = { scale: 0.95, transition: { type: "spring", stiffness: 400, damping: 17 } };
-
+  // Disable body scroll when mobile menu is open
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -62,101 +41,127 @@ export const Navbar = () => {
   return (
     <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-sm transition-all duration-300">
       
-      <div className="w-full bg-[#B08D55] text-white text-center py-1.5 md:py-2.5 px-4 text-[9px] md:text-xs font-bold uppercase tracking-[0.15em] md:tracking-[0.2em]">
-        Welcome to Pahnawa Banaras • Tradition Woven in Silk
+      {/* Top Strip */}
+      <div className="w-full bg-[#B08D55] text-white text-center py-1.5 md:py-2 px-4 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em]">
+        Free Shipping on All Prepaid Orders • Worldwide Delivery Available
       </div>
 
-      <div className="px-4 py-2 md:px-8 flex items-center justify-between h-16 md:h-20 border-b border-gray-100 relative">
+      {/* Main Bar */}
+      <div className="px-4 md:px-8 flex items-center justify-between h-16 md:h-20 border-b border-gray-100 relative">
         
-        <div className="flex items-center gap-3 md:gap-8 w-auto md:w-1/3">
-            <motion.button whileTap={tapAnimation} className="md:hidden text-gray-800 p-1" onClick={() => setMobileMenuOpen(true)}>
+        {/* Left: Mobile Menu & Search */}
+        <div className="flex items-center gap-4 w-1/3">
+            <button className="md:hidden text-gray-800 p-1" onClick={() => setMobileMenuOpen(true)}>
                 <Menu size={24} />
-            </motion.button>
-            
-            <motion.button whileTap={tapAnimation} className="text-gray-800 p-1" onClick={() => navigate('/search')}>
-                <Search size={22} />
-            </motion.button>
+            </button>
+            <button className="text-gray-800 p-1 hover:text-[#B08D55] transition" onClick={() => navigate('/search')}>
+                <Search size={22} strokeWidth={1.5} />
+            </button>
         </div>
 
-        <Link to="/" className="md:hidden absolute left-1/2 -translate-x-1/2 flex justify-center items-center z-50">
-            <motion.img whileTap={tapAnimation} src={Logo} alt="Pahnawa Banaras" className="h-35 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
-        </Link>
-        <Link to="/" className="hidden md:flex flex-1 justify-center items-center z-50">
-          <motion.img whileHover={{ scale: 1.02 }} src={Logo} alt="Pahnawa Banaras" className="h-50 object-contain transition-transform duration-500" onError={(e) => { e.target.style.display = 'none'; }} />
+        {/* Center: Logo */}
+        <Link to="/" className="flex-1 flex justify-center items-center z-50">
+          <img 
+            src={Logo} 
+            alt="Pahnawa Banaras" 
+            className="h-35 md:h-50 object-contain hover:scale-105 transition-transform duration-500" 
+          />
         </Link>
 
-        <div className="flex items-center justify-end gap-3 md:gap-6 w-1/3">
-          <motion.button whileTap={tapAnimation} className="text-gray-800 p-1 hover:text-[#B08D55] transition" onClick={() => navigate('/profile')}>
-            <User size={22} />
-          </motion.button>
+        {/* Right: Actions */}
+        <div className="flex items-center justify-end gap-4 md:gap-6 w-1/3">
+          <button className="hidden md:block text-gray-800 hover:text-[#B08D55] transition" onClick={() => navigate('/profile')}>
+            <User size={22} strokeWidth={1.5} />
+          </button>
           
-          <motion.div whileTap={tapAnimation} className="hidden md:block relative cursor-pointer p-1" onClick={() => navigate('/favorites')}>
-            <Heart size={22} className="text-gray-500 hover:text-[#B08D55] transition" />
-            {favCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white">{favCount}</span>}
-          </motion.div>
+          <button className="hidden md:block relative hover:text-[#B08D55] transition" onClick={() => navigate('/favorites')}>
+            <Heart size={22} strokeWidth={1.5} />
+            {favCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-white">{favCount}</span>}
+          </button>
 
-          <motion.div whileTap={tapAnimation} className="relative cursor-pointer p-1" onClick={openCart}>
-            <ShoppingBag size={22} className="hover:text-[#B08D55] text-gray-800 transition" />
-            {cartCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#B08D55] text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white">{cartCount}</span>}
-          </motion.div>
+          <button className="relative hover:text-[#B08D55] transition" onClick={openCart}>
+            <ShoppingBag size={22} strokeWidth={1.5} />
+            {cartCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#B08D55] text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-white">{cartCount}</span>}
+          </button>
         </div>
       </div>
 
-      <div className="hidden md:flex justify-center py-4 border-t border-gray-100">
-        <div className="flex gap-12">
-          {navLinks.filter(l => l.name !== 'HOME').map((item) => {
-            const active = isActive(item.link);
+      {/* Desktop Links - Fixed Active State */}
+      <div className="hidden md:flex justify-center py-3.5 border-t border-gray-50 bg-white">
+        <div className="flex gap-8 lg:gap-12">
+          {navLinks.map((item) => {
+            const active = isLinkActive(item.link);
             return (
-              <div key={item.name} className="relative flex flex-col items-center">
-                <Link 
-                  to={item.link} 
-                  className={`text-xs uppercase tracking-[0.15em] font-bold transition-colors duration-300 pb-2 ${active ? 'text-black' : 'text-gray-500 hover:text-[#B08D55]'}`}
-                >
-                  {item.name}
-                </Link>
-                {active && (
-                  <motion.div 
-                    layoutId="navbar-indicator"
-                    className="absolute bottom-0 w-full h-0.5 bg-[#B08D55]"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                )}
-              </div>
-            )
+              <Link
+                key={item.name}
+                to={item.link}
+                className={`text-[11px] uppercase tracking-[0.15em] font-bold transition-all duration-300 border-b-2 pb-1 ${
+                  active 
+                    ? 'text-black border-black' 
+                    : 'text-gray-500 border-transparent hover:text-[#B08D55] hover:border-[#B08D55]'
+                }`}
+              >
+                {item.name}
+              </Link>
+            );
           })}
+           {/* Handle 'View All' separately or as a specialized link */}
+           <Link 
+              to="/shop?cat=all" 
+              className={`text-[11px] uppercase tracking-[0.15em] font-bold transition-all duration-300 border-b-2 pb-1 ${
+                isLinkActive('/shop?cat=all') 
+                  ? 'text-black border-black' 
+                  : 'text-gray-500 border-transparent hover:text-[#B08D55]'
+              }`}
+            >
+             View All
+           </Link>
         </div>
       </div>
 
+      {/* Mobile Menu Drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: "tween", duration: 0.3 }} className="fixed inset-0 z-[100] bg-white md:hidden flex flex-col h-screen shadow-2xl">
-            <div className="p-4 flex justify-between items-center border-b border-gray-100 h-16">
-              <img src={Logo} alt="Logo" className="h-35 object-contain" />
-              <motion.button whileTap={tapAnimation} onClick={() => setMobileMenuOpen(false)} className="p-2 bg-gray-50 rounded-full">
-                <X size={20} className="text-gray-500" />
-              </motion.button>
-            </div>
-            <div className="flex-grow flex flex-col overflow-y-auto pb-20">
-              {navLinks.map((item) => (
-                <Link 
-                  key={item.name}
-                  to={item.link} 
-                  onClick={() => setMobileMenuOpen(false)} 
-                  className={`text-base font-medium py-5 px-6 border-b border-gray-100 flex justify-between items-center ${isActive(item.link) ? 'text-[#B08D55] bg-gray-50' : 'text-gray-900'}`}
-                >
-                  {item.name}
-                  {isActive(item.link) && <ChevronDown size={18} className="text-[#B08D55]" />}
-                </Link>
-              ))}
-              <div className="flex flex-col mt-4">
-                {metaLinks.map((item) => (
-                  <Link key={item.name} to={item.link} onClick={() => setMobileMenuOpen(false)} className="text-base font-medium text-gray-900 py-5 px-6 border-b border-gray-100 flex justify-between items-center">
-                    {item.name}
-                  </Link>
-                ))}
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[90] backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+            <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: "tween", duration: 0.3 }} className="fixed inset-y-0 left-0 z-[100] bg-white w-[80%] max-w-sm shadow-2xl flex flex-col">
+              
+              <div className="p-5 flex justify-between items-center border-b border-gray-100">
+                <img src={Logo} alt="Logo" className="h-35" />
+                <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100">
+                  <X size={20} className="text-gray-500" />
+                </button>
               </div>
-            </div>
-          </motion.div>
+              
+              <div className="flex-grow overflow-y-auto py-4">
+                <div className="px-6 mb-6">
+                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Shop By Category</p>
+                   <div className="space-y-1">
+                     {navLinks.map((item) => {
+                       const active = isLinkActive(item.link);
+                       return (
+                         <Link 
+                           key={item.name}
+                           to={item.link}
+                           onClick={() => setMobileMenuOpen(false)}
+                           className={`flex items-center justify-between py-3 text-sm font-medium ${active ? 'text-[#B08D55] font-bold' : 'text-gray-900'}`}
+                         >
+                           {item.name} <ChevronRight size={16} className="text-gray-300" />
+                         </Link>
+                       );
+                     })}
+                   </div>
+                </div>
+                
+                <div className="px-6 pt-6 border-t border-gray-100">
+                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Account</p>
+                   <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm text-gray-600">My Profile</Link>
+                   <Link to="/favorites" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm text-gray-600">My Wishlist</Link>
+                   <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm text-gray-600">Contact Us</Link>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

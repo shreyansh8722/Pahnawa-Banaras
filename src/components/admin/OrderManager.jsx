@@ -1,93 +1,112 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../lib/firebase';
-import { collection, query, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { Package, CheckCircle, Clock, Truck } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { Truck, CheckCircle, XCircle, Clock, ChevronDown, Search } from 'lucide-react';
 
 export const OrderManager = () => {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    setLoading(false);
-  };
+  const [filter, setFilter] = useState('All');
 
   useEffect(() => {
-    fetchOrders();
+    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
   }, []);
 
-  const updateStatus = async (orderId, newStatus) => {
-    await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
-    fetchOrders();
+  const updateStatus = async (id, status) => {
+    await updateDoc(doc(db, 'orders', id), { status });
+  };
+
+  const filteredOrders = filter === 'All' ? orders : orders.filter(o => o.status === filter);
+
+  const StatusBadge = ({ status }) => {
+    const styles = {
+      Pending: 'bg-yellow-100 text-yellow-700',
+      Shipped: 'bg-blue-100 text-blue-700',
+      Delivered: 'bg-green-100 text-green-700',
+      Cancelled: 'bg-red-100 text-red-700'
+    };
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${styles[status] || 'bg-gray-100'}`}>
+        {status}
+      </span>
+    );
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="font-serif text-2xl text-brand-dark">Orders Received</h3>
-        <button onClick={fetchOrders} className="text-sm text-brand-primary hover:underline">Refresh List</button>
+      {/* Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {['All', 'Pending', 'Shipped', 'Delivered', 'Cancelled'].map(f => (
+          <button 
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              filter === f ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
-      {loading ? (
-        <div className="text-center py-20 text-gray-400">Loading orders...</div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-20 bg-white border border-dashed border-gray-200 rounded-sm">
-            <Package size={48} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No orders yet.</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white border border-gray-100 rounded-sm p-6 shadow-sm flex flex-col md:flex-row gap-6 justify-between">
-              
-              {/* Order Details */}
-              <div className="flex-1">
+      {/* Orders List */}
+      <div className="grid gap-4">
+        {filteredOrders.map(order => (
+          <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex flex-col md:flex-row justify-between md:items-start gap-4 mb-6">
+              <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">#{order.id.slice(0,6)}</span>
-                    <span className="text-xs text-gray-500">{order.createdAt?.toDate().toLocaleString()}</span>
+                   <span className="font-mono text-sm text-gray-500">#{order.id.slice(0,8)}</span>
+                   <StatusBadge status={order.status} />
                 </div>
-                <h4 className="font-bold text-brand-dark text-lg mb-1">₹{order.totalAmount}</h4>
-                <p className="text-sm text-gray-600 mb-4">
-                    Customer: <span className="font-medium">{order.shippingDetails?.firstName} {order.shippingDetails?.lastName}</span> 
-                    <br/><span className="text-xs text-gray-400">{order.shippingDetails?.phone}</span>
-                </p>
-                
-                <div className="space-y-1">
-                    {order.items?.map((item, i) => (
-                        <div key={i} className="text-sm text-gray-700 flex gap-2">
-                            <span className="text-gray-400">x{item.quantity}</span> {item.name}
-                        </div>
-                    ))}
-                </div>
+                <h3 className="font-medium text-gray-900">{order.shippingDetails?.firstName} {order.shippingDetails?.lastName}</h3>
+                <p className="text-sm text-gray-500">{order.shippingDetails?.city}, {order.shippingDetails?.state}</p>
               </div>
-
-              {/* Status Actions */}
-              <div className="flex flex-col gap-2 min-w-[150px]">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Update Status</p>
-                <button 
-                    onClick={() => updateStatus(order.id, 'Shipped')}
-                    className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase rounded-sm transition-colors ${order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}
-                >
-                    <Truck size={14} /> Shipped
-                </button>
-                <button 
-                    onClick={() => updateStatus(order.id, 'Delivered')}
-                    className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase rounded-sm transition-colors ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}
-                >
-                    <CheckCircle size={14} /> Delivered
-                </button>
-                <div className="mt-2 text-center">
-                    <span className="text-[10px] uppercase tracking-wider text-gray-400">Current: {order.status}</span>
-                </div>
+              
+              <div className="text-right">
+                <p className="text-sm text-gray-500 mb-1">{order.createdAt?.toDate().toLocaleDateString()}</p>
+                <p className="text-xl font-bold text-gray-900">₹{order.totalAmount}</p>
               </div>
-
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* Order Items */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
+               {order.items?.map((item, idx) => (
+                 <div key={idx} className="flex items-center gap-3">
+                    <span className="font-bold text-gray-500 text-xs">{item.quantity}x</span>
+                    <span className="text-sm text-gray-800 flex-1">{item.name}</span>
+                    <span className="text-sm text-gray-600">₹{item.price}</span>
+                 </div>
+               ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-3 border-t border-gray-100 pt-4">
+               <button 
+                 onClick={() => updateStatus(order.id, 'Shipped')}
+                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold uppercase transition-colors"
+               >
+                 <Truck size={16} /> Mark Shipped
+               </button>
+               <button 
+                 onClick={() => updateStatus(order.id, 'Delivered')}
+                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-bold uppercase transition-colors"
+               >
+                 <CheckCircle size={16} /> Mark Delivered
+               </button>
+               <button 
+                 onClick={() => updateStatus(order.id, 'Cancelled')}
+                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-bold uppercase transition-colors ml-auto"
+               >
+                 <XCircle size={16} /> Cancel Order
+               </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

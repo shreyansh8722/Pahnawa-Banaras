@@ -1,57 +1,81 @@
 import React from 'react';
 import { X } from 'lucide-react';
-// --- REMOVED motion, AnimatePresence ---
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const FilterModal = ({
   open,
   onClose,
   currentFilter,
   onFilterSelect,
-  filterOptions = [], // Accept filters as a prop
+  filterOptions = [],
 }) => {
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end"
-      onClick={onClose} // Close when clicking backdrop
-    >
-      <div
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking modal
-        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-t-[28px] shadow-2xl p-6 pb-8 border-t border-gray-200 dark:border-gray-700"
-      >
-        <div className="w-10 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4" />
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Filters
-          </h2>
-          <button
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
-            aria-label="Close filters"
+          />
+          
+          {/* Modal */}
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-[70] bg-white rounded-t-[20px] shadow-2xl md:bottom-auto md:top-1/2 md:left-1/2 md:w-full md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl"
           >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {filterOptions.map((f) => (
-            <button // --- REMOVED motion.button ---
-              key={f.id}
-              onClick={() => onFilterSelect(f.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${
-                currentFilter === f.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              {f.icon}
-              {f.name}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+            <div className="p-6 pb-8">
+              {/* Mobile Pull Bar */}
+              <div className="w-10 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 md:hidden" />
+              
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-serif font-bold text-gray-900">Filter Collection</h2>
+                <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {filterOptions.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      onFilterSelect(f.id);
+                      onClose();
+                    }}
+                    className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border ${
+                      currentFilter === f.id
+                        ? 'bg-[#B08D55] text-white border-[#B08D55] shadow-md'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-[#B08D55] hover:text-[#B08D55]'
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-center">
+                <button 
+                  onClick={() => { onFilterSelect('All'); onClose(); }}
+                  className="text-xs font-bold text-gray-400 hover:text-gray-900 uppercase tracking-wider"
+                >
+                  Clear All
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="bg-black text-white px-8 py-3 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-gray-800"
+                >
+                  View Results
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 };
