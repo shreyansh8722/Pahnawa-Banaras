@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom'; // Import createPortal
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageZoomModal } from './ImageZoomModal';
 import { Expand } from 'lucide-react';
@@ -30,7 +31,7 @@ export const ProductGallery = ({ images, name }) => {
   return (
     <div className="w-full select-none">
       
-      {/* DESKTOP: Thumbnails + Main Image */}
+      {/* DESKTOP */}
       <div className="hidden md:flex gap-4 h-[600px] lg:h-[700px] w-full">
         <div ref={thumbRef} className="w-20 lg:w-24 flex flex-col gap-3 overflow-y-auto scrollbar-hide h-full shrink-0 py-1">
           {images.map((img, idx) => (
@@ -65,14 +66,12 @@ export const ProductGallery = ({ images, name }) => {
         </div>
       </div>
 
-      {/* MOBILE: Native Swipe + Dots (Fixed Height) */}
+      {/* MOBILE */}
       <div className="md:hidden relative w-full bg-gray-100">
-        {/* CHANGED: Using h-[60vh] instead of aspect ratio to prevent "too large" feel on tall phones */}
         <div className="h-[60vh] w-full relative">
             <div 
               ref={scrollRef}
               onScroll={handleScroll}
-              // Native scrolling enabled, no special touch-action needed for standard behavior
               className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
               style={{ scrollBehavior: 'smooth' }}
             >
@@ -92,7 +91,6 @@ export const ProductGallery = ({ images, name }) => {
             </div>
         </div>
         
-        {/* Dots */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 p-2 rounded-full bg-black/20 backdrop-blur-sm">
           {images.map((_, idx) => (
             <div key={idx} className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${activeIndex === idx ? 'bg-white w-6' : 'bg-white/50 w-1.5'}`} />
@@ -100,14 +98,17 @@ export const ProductGallery = ({ images, name }) => {
         </div>
       </div>
 
-      {/* Zoom Modal */}
-      <ImageZoomModal 
-        isOpen={isZoomOpen} 
-        onClose={() => setIsZoomOpen(false)}
-        images={images}
-        activeIndex={activeIndex}
-        setActiveIndex={setActiveIndex}
-      />
+      {/* Zoom Modal - Rendered via Portal */}
+      {isZoomOpen && createPortal(
+        <ImageZoomModal 
+          isOpen={isZoomOpen} 
+          onClose={() => setIsZoomOpen(false)}
+          images={images}
+          activeIndex={activeIndex}
+          setActiveIndex={setActiveIndex}
+        />,
+        document.body
+      )}
     </div>
   );
 };

@@ -3,50 +3,53 @@ import { collection, query, where, limit, getDocs, orderBy } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
+import { useFavorites } from '@/hooks/useFavorites';
+import { useCart } from '@/context/CartContext';
 
 export const ProductRecommendations = ({ title, category, currentProductId, type = 'related' }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+  const { favorites, toggleFavorite } = useFavorites();
 
   useEffect(() => {
     const fetchRecs = async () => {
       setLoading(true);
       try {
+        const productsRef = collection(db, 'products');
         let q;
+
+        // Try filtering by category first
         if (type === 'related' && category) {
-          // Fetch similar category, excluding current
-          q = query(
-            collection(db, 'products'), 
-            where('category', '==', category), 
-            limit(5) 
-          );
+          q = query(productsRef, where('category', '==', category), limit(6));
         } else {
-          // Fetch "Best Sellers" (just latest for now, or sort by sales if you have that field)
-          q = query(
-            collection(db, 'products'), 
-            orderBy('createdAt', 'desc'), 
-            limit(5)
-          );
+          q = query(productsRef, orderBy('createdAt', 'desc'), limit(6));
         }
 
         const snap = await getDocs(q);
-        // Filter out current product client-side if needed
-        const docs = snap.docs
+        let docs = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(p => p.id !== currentProductId)
-          .slice(0, 4); // Show max 4
+          .slice(0, 4);
 
+        // Fallback: If no related items, fetch recent items
+        if (docs.length === 0 && type === 'related') {
+           const fallbackQ = query(productsRef, orderBy('createdAt', 'desc'), limit(6));
+           const fallbackSnap = await getDocs(fallbackQ);
+           docs = fallbackSnap.docs
+             .map(d => ({ id: d.id, ...d.data() }))
+             .filter(p => p.id !== currentProductId)
+             .slice(0, 4);
+        }
+        
         setProducts(docs);
       } catch (err) {
-        console.error("Recs fetch error:", err);
+        console.error("Error fetching recommendations:", err);
       } finally {
         setLoading(false);
       }
     };
-
-    if (category || type === 'bestseller') {
-      fetchRecs();
-    }
+    fetchRecs();
   }, [category, currentProductId, type]);
 
   if (!loading && products.length === 0) return null;
@@ -62,8 +65,14 @@ export const ProductRecommendations = ({ title, category, currentProductId, type
         <div className="flex justify-center py-10"><Loader2 className="animate-spin text-gray-300" /></div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8">
-          {products.map(product => (
-            <ProductCard key={product.id} item={product} />
+          {products.map(item => (
+            <ProductCard 
+                key={item.id} 
+                item={item} 
+                onAddToCart={() => addToCart(item)}
+                isFavorite={favorites.includes(item.id)}
+                onToggleFavorite={toggleFavorite}
+            />
           ))}
         </div>
       )}

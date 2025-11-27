@@ -1,10 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 const CartContext = createContext();
 
 export const useCart = () => {
   return useContext(CartContext);
 };
+
+// --- DEFINED PROMO CODES ---
+const AVAILABLE_PROMO_CODES = [
+  { code: 'WELCOME5', type: 'percent', value: 5, description: '5% off your first order', minOrder: 0 },
+  { code: 'SAVE100', type: 'fixed', value: 100, description: 'Flat ₹100 off on orders above ₹2000', minOrder: 2000 },
+  { code: 'BANARAS10', type: 'percent', value: 10, description: '10% off festive sale', minOrder: 5000 },
+];
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
@@ -17,13 +24,45 @@ export const CartProvider = ({ children }) => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  // Promo State
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [promoError, setPromoError] = useState('');
 
   useEffect(() => {
     localStorage.setItem('pahnawa_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // 1. Calculate Subtotal
+  const subtotal = useMemo(() => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  }, [cart]);
+
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
+
+  // 2. Check Validity & Calculate Discount
+  useEffect(() => {
+    // If subtotal drops below minOrder, remove the coupon automatically
+    if (appliedPromo && appliedPromo.minOrder > subtotal) {
+      setAppliedPromo(null);
+      setPromoError(`Coupon removed. Order value must be at least ₹${appliedPromo.minOrder}`);
+    }
+  }, [subtotal, appliedPromo]);
+
+  const discount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    if (subtotal < appliedPromo.minOrder) return 0;
+
+    if (appliedPromo.type === 'fixed') {
+      return appliedPromo.value;
+    } else {
+      return Math.round((subtotal * appliedPromo.value) / 100);
+    }
+  }, [subtotal, appliedPromo]);
+
+  const cartTotal = Math.max(0, subtotal - discount);
+
+  // --- Actions ---
 
   const addToCart = (product) => {
     setCart(prev => {
@@ -37,14 +76,14 @@ export const CartProvider = ({ children }) => {
 
       if (existingIndex > -1) {
         const newCart = [...prev];
-        newCart[existingIndex].quantity += product.quantity; // Add specific quantity
+        newCart[existingIndex].quantity += product.quantity;
         return newCart;
       }
       return [...prev, { ...product, cartItemId: uniqueId }];
     });
     
-    // AUTO-OPEN CART
-    setIsCartOpen(true);
+    setIsCartOpen(true); // Auto-open cart
+    setPromoError('');
   };
 
   const removeFromCart = (cartItemId) => {
@@ -60,13 +99,43 @@ export const CartProvider = ({ children }) => {
     }));
   };
 
-  const clearCart = () => setCart([]);
+  const applyPromoCode = (code) => {
+    setPromoError('');
+    const coupon = AVAILABLE_PROMO_CODES.find(c => c.code === code.toUpperCase());
+
+    if (!coupon) {
+      setPromoError('Invalid coupon code.');
+      return false;
+    }
+
+    if (subtotal < coupon.minOrder) {
+      setPromoError(`Add items worth ₹${coupon.minOrder - subtotal} more to use this code.`);
+      return false;
+    }
+
+    setAppliedPromo(coupon);
+    return true;
+  };
+
+  const removePromoCode = () => {
+    setAppliedPromo(null);
+    setPromoError('');
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    setAppliedPromo(null);
+    setPromoError('');
+  };
+  
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
   const value = {
     cart,
     subtotal,
+    discount,
+    cartTotal,
     cartCount,
     isCartOpen,
     addToCart,
@@ -74,7 +143,14 @@ export const CartProvider = ({ children }) => {
     updateQuantity,
     clearCart,
     openCart,
-    closeCart
+    closeCart,
+    
+    // Promo Props
+    availableCoupons: AVAILABLE_PROMO_CODES,
+    appliedPromo,
+    promoError,
+    applyPromoCode,
+    removePromoCode
   };
 
   return (

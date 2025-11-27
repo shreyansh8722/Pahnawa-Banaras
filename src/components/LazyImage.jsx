@@ -1,32 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export const LazyImage = ({ src, alt, className, isPriority = false }) => {
   const [loaded, setLoaded] = useState(false);
-  
+  const imgRef = useRef(null);
+
   useEffect(() => {
-    if (isPriority) {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => setLoaded(true);
+    const img = imgRef.current;
+    // If the image is already cached by the browser, mark as loaded immediately
+    if (img && img.complete) {
+      setLoaded(true);
     }
-  }, [src, isPriority]);
+  }, []); // Run once on mount
 
   return (
     <div className={`relative overflow-hidden bg-gray-100 ${className}`}>
-      {/* Skeleton Loader while image loads */}
-      <div 
-        className={`absolute inset-0 bg-gray-200 animate-pulse transition-opacity duration-500 ${loaded ? "opacity-0" : "opacity-100"}`}
-        aria-hidden="true"
-      />
+      {/* Skeleton: Only show if NOT loaded */}
+      {!loaded && (
+        <div 
+          className="absolute inset-0 bg-gray-200 animate-pulse z-10"
+          aria-hidden="true"
+        />
+      )}
       
       <img
+        ref={imgRef}
         src={src}
-        alt={alt || "Pahnawa Banaras Product"} // Fallback for Accessibility
+        alt={alt || "Pahnawa Banaras"}
         loading={isPriority ? "eager" : "lazy"}
-        decoding={isPriority ? "sync" : "async"}
         fetchPriority={isPriority ? "high" : "auto"}
         onLoad={() => setLoaded(true)}
-        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
       />
     </div>
   );

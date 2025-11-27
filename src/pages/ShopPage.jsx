@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom'; // Added useNavigate
 import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ProductCard } from '@/components/shop/ProductCard';
-import { CartModal } from '@/components/shop/CartModal'; // Import global modal just in case
 import { Filter } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useCart } from '@/context/CartContext';
@@ -14,6 +13,7 @@ import { SEO } from '@/components/SEO';
 export default function ShopPage() {
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('cat') || 'All';
+  const navigate = useNavigate(); // Add navigate hook
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +29,8 @@ export default function ShopPage() {
         const snap = await getDocs(q);
         const allProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // ROBUST FILTERING LOGIC
         const filtered = categoryParam === 'All' ? allProducts : allProducts.filter(p => {
-            // Convert all to lowercase for comparison
             const searchCat = categoryParam.toLowerCase();
-            // "sarees" -> "saree" (singularize for better matching)
             const searchSingular = searchCat.endsWith('s') ? searchCat.slice(0, -1) : searchCat;
             
             const pCat = (p.category || '').toLowerCase();
@@ -62,13 +59,11 @@ export default function ShopPage() {
       <SEO title={`${title} - Pahnawa Banaras`} />
       <Navbar />
 
-      {/* Page Header */}
-      <div className="bg-brand-gray py-12 md:py-20 text-center px-4">
+      <div className="bg-[#F5F0EB] py-12 md:py-20 text-center px-4">
         <h1 className="font-serif text-4xl md:text-6xl text-brand-dark mb-4">{title}</h1>
         <p className="text-gray-500 text-sm uppercase tracking-[0.2em]">Handwoven Elegance</p>
       </div>
 
-      {/* Filter Bar */}
       <div className="sticky top-[60px] md:top-[80px] z-30 bg-white border-b border-gray-100 py-4 px-4 md:px-8 flex justify-between items-center shadow-sm">
         <div className="text-sm text-gray-500">Showing {products.length} products</div>
         <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-brand-primary transition-colors">
@@ -76,7 +71,6 @@ export default function ShopPage() {
         </button>
       </div>
 
-      {/* Product Grid */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 flex-grow w-full">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
@@ -105,6 +99,7 @@ export default function ShopPage() {
       </div>
 
       <Footer />
+      {/* No <CartModal /> here anymore */}
     </div>
   );
 }
