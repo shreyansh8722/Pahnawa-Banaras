@@ -1,9 +1,11 @@
 import React, { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async'; // ADD THIS
 import '@/index.css';
+import { AppSkeleton } from '@/components/skeletons/AppSkeleton';
+import { CartProvider } from '@/context/CartContext';
 
-// Layout & Pages
 const LazyApp = lazy(() => import('@/App'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const ShopPage = lazy(() => import('@/pages/ShopPage'));
@@ -17,8 +19,6 @@ const OrderSuccessPage = lazy(() => import('@/pages/OrderSuccessPage'));
 const FavoritesPage = lazy(() => import('@/pages/FavoritesPage'));
 const SearchPage = lazy(() => import('@/pages/SearchPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
-
-// --- NEW ADMIN PAGE ---
 const AdminPage = lazy(() => import('@/pages/AdminPage'));
 
 const router = createBrowserRouter([
@@ -37,10 +37,7 @@ const router = createBrowserRouter([
       { path: '/favorites', element: <FavoritesPage /> },
       { path: '/search', element: <SearchPage /> },
       { path: '/profile', element: <ProfilePage /> },
-      
-      // --- ADMIN ROUTE ---
       { path: '/admin', element: <AdminPage /> },
-
       { path: '*', element: <NotFoundPage /> },
     ],
   },
@@ -48,8 +45,12 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Suspense fallback={<div className="h-screen w-full bg-white flex items-center justify-center text-[#B08D55]">Loading Pahnawa...</div>}>
-      <RouterProvider router={router} />
-    </Suspense>
+    <HelmetProvider> {/* WRAPPER */}
+      <CartProvider>
+        <Suspense fallback={<AppSkeleton />}>
+          <RouterProvider router={router} />
+        </Suspense>
+      </CartProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );

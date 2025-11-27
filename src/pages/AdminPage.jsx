@@ -47,9 +47,10 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#F3F4F6] font-sans text-[#1A1A1A] flex flex-col">
       
       {/* --- Admin Navbar --- */}
-      <div className="w-full px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-50 bg-[#1A1A1A] text-white">
+      <div className="w-full px-6 py-4 flex justify-between items-center sticky top-0 z-50 bg-[#1A1A1A] text-white">
         <div className="flex items-center gap-4">
-           <div className="w-8 h-8 bg-[#B08D55] rounded-sm flex items-center justify-center font-serif font-bold text-white">P</div>
+           {/* FIX: Removed logo background/container for a cleaner look */}
+           <div className="font-serif font-bold text-white text-3xl leading-none pt-1">P</div> 
            <div>
              <h1 className="font-serif text-xl tracking-wide text-[#B08D55] leading-none">Admin</h1>
              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Pahnawa Banaras</span>

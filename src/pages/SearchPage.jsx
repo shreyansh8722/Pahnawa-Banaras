@@ -6,7 +6,7 @@ import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { CartModal } from '@/components/shop/CartModal';
-import { Search, X } from 'lucide-react';
+import { Search, X, ArrowLeft } from 'lucide-react';
 
 export default function SearchPage() {
   const [queryText, setQueryText] = useState('');
@@ -17,12 +17,12 @@ export default function SearchPage() {
   const [showCart, setShowCart] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch all products initially (Client-side search for simplicity with Firestore)
+  // Fetch all products initially
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const q = query(collection(db, 'spots'), where('category', '==', 'artifact'));
+        const q = query(collection(db, 'products'));
         const snap = await getDocs(q);
         const allDocs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProducts(allDocs);
@@ -55,43 +55,63 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-brand-dark flex flex-col">
+    <div className="min-h-screen bg-white font-sans text-brand-dark flex flex-col w-full overflow-x-hidden">
       <Navbar cartCount={cart.length} onOpenCart={() => setShowCart(true)} />
 
-      <div className="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-12 w-full">
+      <div className="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-12 w-full">
         
-        {/* Search Input Area */}
-        <div className="max-w-2xl mx-auto mb-16 relative">
-          <input
-            type="text"
-            value={queryText}
-            onChange={(e) => setQueryText(e.target.value)}
-            placeholder="Search for sarees, lehengas, silk..."
-            className="w-full border-b-2 border-gray-200 py-4 pl-2 pr-12 text-2xl font-serif placeholder-gray-300 focus:outline-none focus:border-[#B08D55] bg-transparent"
-            autoFocus
-          />
-          {queryText ? (
-            <button onClick={() => setQueryText('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X size={24} />
+        {/* Search Header - Improved for Mobile Navigation */}
+        <div className="max-w-2xl mx-auto mb-10 sticky top-20 z-30 bg-white/95 backdrop-blur py-2">
+          <div className="flex items-center gap-3">
+            {/* Mobile Back Button */}
+            <button 
+              onClick={() => navigate(-1)} 
+              className="md:hidden p-2 -ml-2 text-gray-500"
+            >
+              <ArrowLeft size={24} />
             </button>
-          ) : (
-             <Search size={24} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300" />
-          )}
+
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                value={queryText}
+                onChange={(e) => setQueryText(e.target.value)}
+                placeholder="Search for sarees, lehengas..."
+                className="w-full border-b-2 border-gray-200 py-3 pl-2 pr-10 text-lg font-serif placeholder-gray-300 focus:outline-none focus:border-[#B08D55] bg-transparent"
+                autoFocus
+              />
+              {queryText ? (
+                <button onClick={() => setQueryText('')} className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-gray-400">
+                  <X size={20} />
+                </button>
+              ) : (
+                 <Search size={20} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300" />
+              )}
+            </div>
+
+            {/* Cancel Text Button for Desktop */}
+            <button 
+              onClick={() => navigate('/')}
+              className="hidden md:block text-sm font-bold text-gray-400 hover:text-brand-dark transition-colors"
+            >
+              CANCEL
+            </button>
+          </div>
         </div>
 
-        {/* Results */}
+        {/* Results Area */}
         <div>
           {loading ? (
-             <p className="text-center text-gray-400">Loading collections...</p>
+             <div className="text-center py-20 text-gray-400">Searching...</div>
           ) : queryText && filteredProducts.length === 0 ? (
-             <div className="text-center">
-               <p className="text-gray-500">No matches found for "{queryText}"</p>
-               <button onClick={() => navigate('/shop')} className="mt-4 text-[#B08D55] hover:underline font-bold text-sm uppercase tracking-widest">
-                 Browse All Collections
+             <div className="text-center py-10">
+               <p className="text-gray-500 mb-4">No matches found for "{queryText}"</p>
+               <button onClick={() => navigate('/shop')} className="text-[#B08D55] font-bold text-xs uppercase tracking-widest border-b border-[#B08D55] pb-1">
+                 View All Collections
                </button>
              </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-12 md:gap-x-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 gap-y-8 md:gap-x-8">
               {filteredProducts.map(item => (
                 <ProductCard key={item.id} item={item} onAddToCart={addToCart} />
               ))}
@@ -99,16 +119,16 @@ export default function SearchPage() {
           )}
         </div>
 
-        {/* Empty State / Suggestions */}
+        {/* Suggestions */}
         {!queryText && !loading && (
-          <div className="text-center mt-10">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6">Popular Searches</h4>
-            <div className="flex flex-wrap justify-center gap-3">
-              {['Banarasi Saree', 'Bridal Lehenga', 'Katan Silk', 'Pink Dupatta'].map(term => (
+          <div className="mt-8">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 text-center md:text-left">Trending</h4>
+            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+              {['Banarasi Saree', 'Bridal Lehenga', 'Katan Silk', 'Pink Dupatta', 'Suit'].map(term => (
                 <button 
                   key={term}
                   onClick={() => setQueryText(term)}
-                  className="px-6 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#B08D55] hover:text-[#B08D55] transition-colors"
+                  className="px-4 py-2 bg-gray-50 rounded-full text-sm text-gray-600 hover:bg-gray-100 transition-colors"
                 >
                   {term}
                 </button>

@@ -1,17 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export const LazyImage = ({ src, alt, className, isPriority = false }) => {
   const [loaded, setLoaded] = useState(false);
+  
+  useEffect(() => {
+    if (isPriority) {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => setLoaded(true);
+    }
+  }, [src, isPriority]);
+
   return (
-    <div className="relative w-full h-full">
-      {!loaded && <div className="absolute inset-0 bg-gray-800/30 animate-pulse rounded-2xl" />}
+    <div className={`relative overflow-hidden bg-gray-100 ${className}`}>
+      {/* Skeleton Loader while image loads */}
+      <div 
+        className={`absolute inset-0 bg-gray-200 animate-pulse transition-opacity duration-500 ${loaded ? "opacity-0" : "opacity-100"}`}
+        aria-hidden="true"
+      />
+      
       <img
         src={src}
-        alt={alt}
+        alt={alt || "Pahnawa Banaras Product"} // Fallback for Accessibility
         loading={isPriority ? "eager" : "lazy"}
-        fetchpriority={isPriority ? "high" : "auto"}
+        decoding={isPriority ? "sync" : "async"}
+        fetchPriority={isPriority ? "high" : "auto"}
         onLoad={() => setLoaded(true)}
-        className={`${className} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );
