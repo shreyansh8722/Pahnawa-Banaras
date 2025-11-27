@@ -14,9 +14,7 @@ import LocalHeroImg from '../assets/hero.webp';
 
 const CATEGORIES = [
   { name: 'Banarasi', img: 'https://images.unsplash.com/photo-1583391726247-e29237d8612f?w=400&h=400&fit=crop' },
-  { name: 'Tanchoi', img: 'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=400&fit=crop' },
   { name: 'Bridal', img: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&h=400&fit=crop' },
-  { name: 'Lehengas', img: 'https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?w=400&h=400&fit=crop' },
   { name: 'Suit', img: 'https://images.unsplash.com/photo-1605902394263-66869c466503?w=400&h=400&fit=crop' },
   { name: 'Dupatta', img: 'https://images.unsplash.com/photo-1621623194266-4b3664963684?w=400&h=400&fit=crop' },
 ];
