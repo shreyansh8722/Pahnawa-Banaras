@@ -34,7 +34,6 @@ export default function FavoritesPage() {
       setLoadingData(true);
       try {
         // 2. CHUNKING LOGIC: Firestore limits 'in' queries to 10 items.
-        // We split the favorites array into chunks of 10.
         const chunks = [];
         for (let i = 0; i < favorites.length; i += 10) {
           chunks.push(favorites.slice(i, i + 10));
@@ -77,38 +76,44 @@ export default function FavoritesPage() {
     <div className="min-h-screen bg-white font-sans text-brand-dark flex flex-col">
       <Navbar cartCount={0} onOpenCart={() => setShowCart(true)} />
 
-      <div className="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-12 w-full">
+      <div className="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 w-full">
         
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-gray-100 pb-6">
-          <div>
+        {/* Header - FIXED ALIGNMENT */}
+        <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 md:mb-10 border-b border-gray-100 pb-6 gap-4">
+          <div className="text-center md:text-left">
             <h1 className="font-serif text-3xl md:text-4xl text-gray-900 mb-2">My Wishlist</h1>
             <p className="text-xs text-gray-500 uppercase tracking-widest">
               {favProducts.length} {favProducts.length === 1 ? 'Item' : 'Items'} Saved
             </p>
           </div>
-          <button onClick={() => navigate('/shop')} className="hidden md:flex items-center gap-2 text-xs font-bold text-[#B08D55] uppercase tracking-widest hover:text-black transition-colors">
+          
+          <button 
+            onClick={() => navigate('/shop')} 
+            className="hidden md:flex items-center gap-2 text-xs font-bold text-[#B08D55] uppercase tracking-widest hover:text-black transition-colors"
+          >
             Continue Shopping <ArrowRight size={16} />
           </button>
         </div>
 
         {/* Content */}
         {!user ? (
-          <div className="text-center py-20 bg-gray-50 rounded-sm">
-            <Heart size={48} className="mx-auto text-gray-300 mb-4" />
+          <div className="text-center py-16 md:py-20 bg-gray-50 rounded-sm border border-gray-100 mx-auto max-w-lg">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-gray-300">
+               <Heart size={32} fill="currentColor" className="opacity-50" />
+            </div>
             <h2 className="text-xl font-serif text-gray-900 mb-2">Please Login</h2>
             <p className="text-gray-500 text-sm mb-6">Sign in to view your saved items.</p>
-            <button onClick={() => navigate('/login')} className="bg-[#B08D55] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest">
+            <button onClick={() => navigate('/login')} className="bg-[#B08D55] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#8c6a40] transition-colors rounded-sm shadow-md">
               Login Now
             </button>
           </div>
         ) : favProducts.length === 0 ? (
-          <div className="text-center py-24">
+          <div className="text-center py-20 md:py-24">
             <Heart size={48} className="mx-auto text-gray-200 mb-4" />
             <p className="text-gray-400 font-serif text-xl mb-6">Your wishlist is empty</p>
             <button 
               onClick={() => navigate('/shop')}
-              className="bg-black text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+              className="bg-black text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors rounded-sm"
             >
               Explore Collection
             </button>

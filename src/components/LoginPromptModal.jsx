@@ -14,7 +14,8 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default function LoginPromptModal({ open, onClose }) {
+// CHANGED: export default function -> export function
+export function LoginPromptModal({ open, onClose }) {
   
   const handleGoogleLogin = async () => {
     try {
@@ -35,7 +36,6 @@ export default function LoginPromptModal({ open, onClose }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        // REDUCED PADDING to p-6
         className="bg-white rounded-sm shadow-2xl w-full max-w-[380px] p-6 text-center relative overflow-hidden border-t-4 border-[#B08D55]"
       >
         <button
@@ -45,12 +45,11 @@ export default function LoginPromptModal({ open, onClose }) {
           <X size={20} />
         </button>
 
-        {/* Logo with LESS MARGIN (mb-4) and SPECIFIC HEIGHT (h-[50px]) */}
         <div className="mb-4 flex justify-center">
           <img
             src={Logo}
             alt="Pahnawa Banaras"
-            className="h-50  object-contain"
+            className="h-50 object-contain"
           />
         </div>
 
@@ -58,12 +57,10 @@ export default function LoginPromptModal({ open, onClose }) {
           Experience Heritage
         </h2>
         
-        {/* Reduced bottom margin to mb-6 */}
         <p className="text-gray-500 text-xs mb-6 font-light leading-relaxed px-2">
           Sign in to save your favorite weaves, track orders, and access exclusive member-only collections.
         </p>
 
-        {/* Features Grid - Reduced margin */}
         <div className="grid grid-cols-2 gap-3 mb-6">
            <div className="bg-[#F9F9F9] p-2.5 rounded-sm border border-gray-100 flex flex-col items-center gap-1.5">
               <Heart size={18} className="text-[#B08D55]" />

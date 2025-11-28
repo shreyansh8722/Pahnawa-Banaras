@@ -1,22 +1,28 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import LoadingSpinner from './LoadingSpinner';
+import { useAuth } from '@/hooks/useAuth';
+import LoadingSpinner from './LoadingSpinner'; // Ensure this component exists
 
-// This component wraps our protected pages
-export default function ProtectedRoute({ children }) {
+const ADMIN_EMAIL = "shreyanshtripathi71@gmail.com";
+
+// CHANGED: export default function -> export function (Named Export)
+export function ProtectedRoute({ children, adminOnly }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    // Show a spinner while auth state is being checked
     return <LoadingSpinner />;
   }
 
+  // 1. Check if Logged In
   if (!user) {
-    // If not logged in, redirect to the login page
     return <Navigate to="/login" replace />;
   }
 
-  // If logged in, show the page
+  // 2. Check if Admin (Security Layer)
+  if (adminOnly && user.email !== ADMIN_EMAIL) {
+    // If a normal user tries to access Admin panel, kick them to Home
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 }
