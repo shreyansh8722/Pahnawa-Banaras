@@ -1,12 +1,12 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
-import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite' // The V4 Plugin
 
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(),
+    tailwindcss(), // Activate V4
   ],
   resolve: {
     alias: {
@@ -22,7 +22,7 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          'ui-vendor': ['framer-motion', 'lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-slot'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
         },
       },
     },
