@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { StarIcon, Camera, Loader2, X } from 'lucide-react';
+import { Star, Camera, Loader2, X } from 'lucide-react';
 import {
   ref as storageRef,
   uploadBytesResumable,
@@ -15,7 +15,7 @@ import {
 import { db, storage } from '@/lib/firebase';
 
 export const ReviewForm = ({
-  spotId,
+  spotId, // This is the productId
   user,
   onPostSuccess,
   isPosting,
@@ -61,7 +61,7 @@ export const ReviewForm = ({
       const reviewData = {
         spotId,
         userId: user.uid,
-        username: user.displayName || user.email || 'Anonymous',
+        username: user.displayName || user.email.split('@')[0] || 'Anonymous',
         userEmail: user.email,
         rating: newRating,
         comment: newReviewText.trim(),
@@ -70,19 +70,24 @@ export const ReviewForm = ({
         createdAt: serverTimestamp(),
       };
 
-      const spotRef = doc(db, 'spots', spotId);
+      const productRef = doc(db, 'products', spotId);
       const newReviewRef = doc(collection(db, 'reviews'));
 
       await runTransaction(db, async (transaction) => {
-        const spotDoc = await transaction.get(spotRef);
-        if (!spotDoc.exists()) throw 'Spot document does not exist!';
-        const oldReviewCount = spotDoc.data().reviewCount || 0;
-        const oldAverageRating = spotDoc.data().averageRating || 0;
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) throw 'Product document does not exist!';
+        
+        const data = productDoc.data();
+        const oldReviewCount = data.reviewCount || 0;
+        const oldAverageRating = data.averageRating || 0;
+        
+        // Calculate new average
         const newReviewCount = oldReviewCount + 1;
         const newAverageRating =
-          (oldAverageRating * oldReviewCount + newRating) / newReviewCount;
+          ((oldAverageRating * oldReviewCount) + newRating) / newReviewCount;
+          
         transaction.set(newReviewRef, reviewData);
-        transaction.update(spotRef, {
+        transaction.update(productRef, {
           averageRating: parseFloat(newAverageRating.toFixed(1)),
           reviewCount: newReviewCount,
         });
@@ -92,9 +97,10 @@ export const ReviewForm = ({
       setNewReviewText('');
       setSelectedImageFile(null);
       setUploadProgress(0);
-      onPostSuccess(reviewData, newReviewRef.id);
+      onPostSuccess(); // Callback to close form
     } catch (e) {
       console.error('Failed to post review:', e);
+      alert("Failed to post review. Please try again.");
     } finally {
       setIsPosting(false);
     }
@@ -102,70 +108,69 @@ export const ReviewForm = ({
 
   return (
     <motion.div
-      className="bg-white dark:bg-gray-800 p-4"
-      initial={{ y: -50, opacity: 0 }}
+      className="bg-white p-4 rounded-sm border border-gray-200 mb-8"
+      initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -50, opacity: 0 }}
-      transition={{ type: 'tween', ease: 'easeOut', duration: 0.3 }}
     >
       <div className="flex items-center gap-2 mb-3">
         {Array.from({ length: 5 }).map((_, i) => (
           <button
             key={i + 1}
             onClick={() => setNewRating(i + 1)}
-            className="focus:outline-none"
+            className="focus:outline-none transition-transform hover:scale-110"
           >
-            <StarIcon
-              className={`w-6 h-6 ${
+            <Star
+              size={24}
+              className={`${
                 i + 1 <= newRating
                   ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-gray-300 dark:text-gray-600'
+                  : 'text-gray-300'
               }`}
             />
           </button>
         ))}
-        <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+        <span className="text-sm text-gray-500 ml-2 font-medium">
           {newRating} / 5
         </span>
       </div>
 
       <textarea
         rows={3}
-        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-3 bg-gray-50 dark:bg-gray-700 dark:placeholder-gray-400 dark:text-white"
-        placeholder="Share your experience..."
+        className="w-full border border-gray-200 rounded-sm p-3 text-sm focus:outline-none focus:border-[#B08D55] mb-3 bg-gray-50"
+        placeholder="Share your experience with this product..."
         value={newReviewText}
         onChange={(e) => setNewReviewText(e.target.value)}
       />
 
       {selectedImageFile && !isPosting && (
-        <div className="mb-3 relative">
+        <div className="mb-3 relative inline-block">
           <img
             src={URL.createObjectURL(selectedImageFile)}
             alt="preview"
-            className="w-full h-44 object-cover rounded-lg"
+            className="w-20 h-20 object-cover rounded-sm border border-gray-200"
           />
           <button
             onClick={() => setSelectedImageFile(null)}
-            className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full"
+            className="absolute -top-2 -right-2 bg-black text-white p-1 rounded-full shadow-sm"
             aria-label="Remove image"
           >
-            <X className="w-4 h-4" />
+            <X size={12} />
           </button>
         </div>
       )}
 
       {isPosting && uploadProgress > 0 && (
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-3">
+        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-3">
           <div
-            className="bg-blue-600 h-1.5 rounded-full"
+            className="bg-[#B08D55] h-1.5 rounded-full transition-all duration-300"
             style={{ width: `${uploadProgress}%` }}
           ></div>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white">
-          <Camera className="w-5 h-5" /> Add Image
+      <div className="flex items-center justify-between pt-2">
+        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-black transition-colors">
+          <Camera size={18} /> Add Photo
           <input
             type="file"
             accept="image/*"
@@ -180,12 +185,12 @@ export const ReviewForm = ({
         <button
           onClick={handleSubmitReview}
           disabled={isPosting || !newReviewText.trim()}
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-medium w-28 disabled:bg-gray-300 dark:disabled:bg-gray-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600"
+          className="bg-[#B08D55] text-white px-6 py-2 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-[#8c6a40] disabled:opacity-50 flex items-center gap-2 transition-colors"
         >
           {isPosting ? (
-            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+            <>Posting <Loader2 size={14} className="animate-spin" /></>
           ) : (
-            'Submit'
+            'Submit Review'
           )}
         </button>
       </div>

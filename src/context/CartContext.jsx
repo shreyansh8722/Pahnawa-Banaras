@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useLoginModal } from '@/context/LoginModalContext';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const CartContext = createContext();
 
@@ -6,14 +10,11 @@ export const useCart = () => {
   return useContext(CartContext);
 };
 
-// --- AVAILABLE PROMOS ---
-const AVAILABLE_PROMO_CODES = [
-  { code: 'WELCOME5', type: 'percent', value: 5, description: '5% off your first order', minOrder: 0 },
-  { code: 'SAVE100', type: 'fixed', value: 100, description: 'Flat ₹100 off on orders above ₹2000', minOrder: 2000 },
-  { code: 'BANARAS10', type: 'percent', value: 10, description: '10% off festive sale', minOrder: 5000 },
-];
-
 export const CartProvider = ({ children }) => {
+  const { user } = useAuth();
+  const { openLoginModal } = useLoginModal();
+  
+  // Load Cart from Local Storage
   const [cart, setCart] = useState(() => {
     try {
       const localCart = localStorage.getItem('pahnawa_cart');
@@ -24,19 +25,35 @@ export const CartProvider = ({ children }) => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  
-  // --- Promo State ---
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promoError, setPromoError] = useState('');
+  
+  // Store fetched coupons here
+  const [availableCoupons, setAvailableCoupons] = useState([]);
 
+  // 1. Fetch Coupons from Firestore on Mount
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const q = query(collection(db, 'coupons'), where('isActive', '==', true));
+        const snap = await getDocs(q);
+        const codes = snap.docs.map(doc => doc.data());
+        setAvailableCoupons(codes);
+      } catch (err) {
+        console.error("Failed to load coupons", err);
+      }
+    };
+    fetchCoupons();
+  }, []);
+
+  // 2. Persist Cart to Local Storage
   useEffect(() => {
     localStorage.setItem('pahnawa_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // 1. Calculate Subtotal (with safety checks)
+  // 3. Calculate Totals
   const subtotal = useMemo(() => {
     return cart.reduce((total, item) => {
-      // Ensure price and quantity are valid numbers, default to 0 if not
       const price = Number(item.price) || 0;
       const quantity = Number(item.quantity) || 1;
       return total + (price * quantity);
@@ -45,7 +62,7 @@ export const CartProvider = ({ children }) => {
 
   const cartCount = cart.reduce((count, item) => count + (Number(item.quantity) || 1), 0);
 
-  // 2. Validate Promo & Calculate Discount
+  // 4. Validate Applied Promo when Subtotal Changes
   useEffect(() => {
     if (appliedPromo && subtotal < appliedPromo.minOrder) {
       setAppliedPromo(null);
@@ -66,14 +83,15 @@ export const CartProvider = ({ children }) => {
 
   const cartTotal = Math.max(0, subtotal - discount);
 
-  // --- Actions ---
+  // --- ACTIONS ---
 
   const addToCart = (product) => {
-    // Validations before adding
-    if (!product || !product.id) {
-      console.error("Invalid product passed to addToCart:", product);
+    if (!user) {
+      openLoginModal();
       return;
     }
+
+    if (!product || !product.id) return;
 
     const price = Number(product.price) || 0;
     const quantity = Number(product.quantity) || 1;
@@ -93,12 +111,11 @@ export const CartProvider = ({ children }) => {
         newCart[existingIndex] = {
             ...newCart[existingIndex],
             quantity: currentQty + quantity,
-            price: price // Update price just in case
+            price: price 
         };
         return newCart;
       }
       
-      // Add new item with sanitized values
       return [...prev, { 
         ...product, 
         cartItemId: uniqueId,
@@ -125,9 +142,31 @@ export const CartProvider = ({ children }) => {
     }));
   };
 
-  const applyPromoCode = (code) => {
+  const clearCart = () => {
+    setCart([]);
+    setAppliedPromo(null);
     setPromoError('');
-    const coupon = AVAILABLE_PROMO_CODES.find(c => c.code === code.toUpperCase());
+  };
+
+  const applyPromoCode = async (code) => {
+    setPromoError('');
+    const upperCode = code.toUpperCase().trim();
+
+    // 1. Check local fetched list first (fastest)
+    let coupon = availableCoupons.find(c => c.code === upperCode);
+
+    // 2. If not found locally, check DB directly (in case it was just added)
+    if (!coupon) {
+      try {
+        const q = query(collection(db, 'coupons'), where('code', '==', upperCode), where('isActive', '==', true));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          coupon = snap.docs[0].data();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
 
     if (!coupon) {
       setPromoError('Invalid coupon code.');
@@ -144,12 +183,6 @@ export const CartProvider = ({ children }) => {
   };
 
   const removePromoCode = () => {
-    setAppliedPromo(null);
-    setPromoError('');
-  };
-
-  const clearCart = () => {
-    setCart([]);
     setAppliedPromo(null);
     setPromoError('');
   };
@@ -170,8 +203,7 @@ export const CartProvider = ({ children }) => {
     clearCart,
     openCart,
     closeCart,
-    // Promo Exports
-    availableCoupons: AVAILABLE_PROMO_CODES,
+    availableCoupons, // Exposing fetched coupons to UI
     appliedPromo,
     promoError,
     applyPromoCode,

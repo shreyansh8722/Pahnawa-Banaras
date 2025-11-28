@@ -9,7 +9,7 @@ import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useCart } from '@/context/CartContext';
-import { SEO } from '@/components/SEO'; // Import SEO
+import { SEO } from '@/components/SEO';
 import LocalHeroImg from '../assets/hero.webp';
 
 const CATEGORIES = [
@@ -24,6 +24,7 @@ const FALLBACK_HERO = "https://images.unsplash.com/photo-1583391726247-e29237d86
 export default function HomePage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cartOpen, setCartOpen] = useState(false);
   const navigate = useNavigate();
   
   const { addToCart } = useCart(); 
@@ -37,7 +38,6 @@ export default function HomePage() {
         if (!snap.empty) {
            setProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } else {
-           // Fallback
            const fallbackQ = collection(db, 'products');
            const fallbackSnap = await getDocs(fallbackQ);
            const allDocs = fallbackSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -52,7 +52,11 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
-  // JSON-LD Schema for Google
+  const handleAddToCart = (product) => {
+    addToCart({ ...product, quantity: 1 });
+    setCartOpen(true);
+  };
+
   const schema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -75,13 +79,13 @@ export default function HomePage() {
 
       <Navbar />
 
+      {/* Hero Section */}
       <header className="relative w-full h-[65vh] md:h-[90vh] bg-[#F5F0EB] overflow-hidden">
         <div className="absolute inset-0">
            <img 
             src={LocalHeroImg || FALLBACK_HERO} 
-            alt="Woman wearing blue Banarasi Saree on ghats" // Descriptive Alt Text for Accessibility
+            alt="Woman wearing blue Banarasi Saree on ghats" 
             className="w-full h-full object-cover object-top"
-            // Performance Optimization:
             fetchPriority="high"
             decoding="async"
             onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_HERO; }}
@@ -107,6 +111,7 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Collections Section */}
       <section className="py-10 md:py-16 max-w-7xl mx-auto border-b border-gray-100 w-full" aria-label="Collections">
         <div className="text-center mb-8 md:mb-10 px-4">
           <h2 className="font-serif text-2xl md:text-3xl text-brand-dark">Our Collections</h2>
@@ -141,16 +146,20 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Curated Products Section */}
       <section className="bg-[#F9F9F9] py-10 md:py-16 px-4 md:px-8 flex-grow" aria-label="Curated Products">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-6 md:mb-10 text-center md:text-left">
+          {/* --- FIXED HEADER ALIGNMENT --- */}
+          <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 md:mb-10 text-center md:text-left">
             <div className="w-full md:w-auto">
               <h2 className="font-serif text-2xl md:text-4xl text-brand-dark mb-2">Curated For You</h2>
               <p className="text-gray-500 text-xs md:text-sm font-sans italic">Handpicked masterpieces fresh from our looms.</p>
             </div>
+            
+            {/* Desktop "View All" (Hidden on Mobile) */}
             <button 
               onClick={() => navigate('/shop')} 
-              className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#B08D55] hover:text-brand-dark transition-colors mt-4 md:mt-0 border-b border-[#B08D55] pb-1"
+              className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#B08D55] hover:text-brand-dark transition-colors border-b border-[#B08D55] pb-1"
               aria-label="View all curated products"
             >
               View All <ArrowRight size={16} />
@@ -167,7 +176,7 @@ export default function HomePage() {
                 <ProductCard 
                   key={item.id} 
                   item={item} 
-                  onAddToCart={addToCart} 
+                  onAddToCart={handleAddToCart} 
                   isFavorite={favorites.includes(item.id)}
                   onToggleFavorite={toggleFavorite}
                 />
@@ -179,6 +188,7 @@ export default function HomePage() {
             </div>
           )}
           
+          {/* Mobile "View All" Button (Centered) */}
           <button 
             onClick={() => navigate('/shop')} 
             className="md:hidden w-full mt-8 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-[#B08D55] border border-[#B08D55] py-3.5 rounded-sm hover:bg-[#B08D55] hover:text-white transition-colors"
@@ -189,7 +199,7 @@ export default function HomePage() {
       </section>
 
       <Footer />
-      {/* Global Cart is in main.jsx wrapper */}
+      <CartModal open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }

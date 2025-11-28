@@ -2,9 +2,12 @@ import React, { createContext, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { LocationProvider } from './hooks/useLocation';
+import { CartProvider } from '@/context/CartContext'; // IMPORTED HERE
+import { LoginModalProvider } from '@/context/LoginModalContext'; // IMPORTED HERE
 import { AnimatePresence, motion } from 'framer-motion';
-import { CartModal } from '@/components/shop/CartModal'; // Ensure this path is correct
+import { CartModal } from '@/components/shop/CartModal';
 import ScrollToTop from '@/components/utils/ScrollToTop'; 
+import { WhatsAppButton } from '@/components/common/WhatsAppButton'; // Assuming you want the button
 
 export const ThemeContext = createContext({
   theme: 'light',
@@ -26,28 +29,37 @@ export default function App() {
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       <AuthProvider>
         <LocationProvider>
-          <ScrollToTop />
-          
-          <div className="min-h-screen bg-white text-brand-dark font-sans overflow-x-hidden w-full relative">
-            
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                className="w-full min-h-screen"
-                style={{ willChange: "opacity, transform" }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+          {/* 1. Login Provider (Must be inside Auth) */}
+          <LoginModalProvider>
+            {/* 2. Cart Provider (Must be inside Login & Auth) */}
+            <CartProvider>
+              
+              <ScrollToTop />
+              
+              <div className="min-h-screen bg-white text-brand-dark font-sans overflow-x-hidden w-full relative">
+                
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={location.pathname}
+                    initial="initial"
+                    animate="in"
+                    exit="out"
+                    variants={pageVariants}
+                    className="w-full min-h-screen"
+                    style={{ willChange: "opacity, transform" }}
+                  >
+                    <Outlet />
+                  </motion.div>
+                </AnimatePresence>
 
-            {/* THIS MUST BE HERE FOR THE CART TO OPEN */}
-            <CartModal />
-            
-          </div>
+                {/* Global Overlays */}
+                <WhatsAppButton />
+                <CartModal />
+                
+              </div>
+
+            </CartProvider>
+          </LoginModalProvider>
         </LocationProvider>
       </AuthProvider>
     </ThemeContext.Provider>

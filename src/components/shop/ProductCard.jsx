@@ -1,7 +1,8 @@
 import React, { useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LazyImage } from '@/components/LazyImage';
-import { Heart, ShoppingBag, Plus } from 'lucide-react';
+import { Heart, ShoppingBag, Plus, Star } from 'lucide-react';
+import { formatPrice } from '@/lib/utils';
 
 const ProductCardComponent = ({ item, onAddToCart, onToggleFavorite, isFavorite }) => {
   const navigate = useNavigate();
@@ -24,20 +25,13 @@ const ProductCardComponent = ({ item, onAddToCart, onToggleFavorite, isFavorite 
   };
 
   return (
-    <div 
-      className="group relative cursor-pointer flex flex-col gap-3 h-full"
-      onClick={handleCardClick}
-    >
-      {/* --- IMAGE CONTAINER --- */}
+    <div className="group relative cursor-pointer flex flex-col gap-3 h-full" onClick={handleCardClick}>
       <div className="relative w-full aspect-[2/3] overflow-hidden bg-gray-100 rounded-sm">
-        
-        {/* Images */}
         <div className="absolute inset-0 transition-opacity duration-700 ease-in-out group-hover:opacity-0 z-10">
           <LazyImage src={imageSrc} alt={item.name} className="w-full h-full object-cover" />
         </div>
         <img src={hoverImageSrc} alt={item.name} className="absolute inset-0 w-full h-full object-cover z-0" loading="lazy" />
 
-        {/* Wishlist Button */}
         <button
           onClick={(e) => { e.stopPropagation(); if (onToggleFavorite) onToggleFavorite(item.id); }}
           className="absolute top-2 right-2 p-2 rounded-full bg-white/90 text-gray-600 hover:text-red-500 hover:bg-white transition-all duration-300 z-20 md:opacity-0 md:translate-y-[-10px] md:group-hover:opacity-100 md:group-hover:translate-y-0 shadow-sm"
@@ -45,14 +39,22 @@ const ProductCardComponent = ({ item, onAddToCart, onToggleFavorite, isFavorite 
           <Heart size={18} fill={isFavorite ? "#ef4444" : "none"} className={isFavorite ? "text-red-500" : ""} />
         </button>
 
-        {/* Sale Tag */}
+        {/* NEW: Rating Badge */}
+        {item.averageRating > 0 && (
+          <div className="absolute bottom-2 left-2 z-20 bg-white/90 px-2 py-1 rounded-sm flex items-center gap-1 shadow-sm text-[10px] font-bold md:opacity-0 md:translate-y-[10px] md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
+             <span className="bg-green-700 text-white px-1 rounded flex items-center gap-0.5">
+               {item.averageRating.toFixed(1)} <Star size={8} fill="white" />
+             </span>
+             <span className="text-gray-500">({item.reviewCount})</span>
+          </div>
+        )}
+
         {discountPercentage > 0 && (
           <span className="absolute top-2 left-2 z-20 bg-[#B08D55] text-white text-[10px] font-bold px-2 py-1 uppercase tracking-wider rounded-sm shadow-sm">
             -{discountPercentage}%
           </span>
         )}
 
-        {/* MOBILE QUICK ADD (Floating Button) */}
         <button
           onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
           className="md:hidden absolute bottom-2 right-2 z-20 p-2.5 bg-white text-black rounded-full shadow-lg border border-gray-100 active:scale-90 transition-transform"
@@ -60,7 +62,6 @@ const ProductCardComponent = ({ item, onAddToCart, onToggleFavorite, isFavorite 
           <Plus size={18} />
         </button>
 
-        {/* DESKTOP QUICK ADD (Slide Up) */}
         <div className="absolute inset-x-0 bottom-0 z-20 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out hidden md:block">
           <button
             onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
@@ -71,7 +72,6 @@ const ProductCardComponent = ({ item, onAddToCart, onToggleFavorite, isFavorite 
         </div>
       </div>
 
-      {/* --- DETAILS --- */}
       <div className="flex flex-col gap-1 px-1 flex-grow">
         <h3 className="font-serif text-base md:text-lg text-gray-900 leading-tight group-hover:text-[#B08D55] transition-colors line-clamp-2">
           {item.name}
@@ -81,11 +81,11 @@ const ProductCardComponent = ({ item, onAddToCart, onToggleFavorite, isFavorite 
         </p>
         <div className="flex items-baseline gap-2 mt-auto pt-1">
           <span className="font-bold text-sm md:text-base text-gray-900">
-            ₹{item.price?.toLocaleString('en-IN')}
+            ₹{formatPrice(item.price)}
           </span>
           {item.comparePrice > item.price && (
             <span className="text-xs text-gray-400 line-through decoration-gray-400 font-light">
-              ₹{item.comparePrice?.toLocaleString('en-IN')}
+              ₹{formatPrice(item.comparePrice)}
             </span>
           )}
         </div>

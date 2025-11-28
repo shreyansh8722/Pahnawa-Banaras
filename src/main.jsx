@@ -1,11 +1,11 @@
 import React, { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async'; // ADD THIS
+import { HelmetProvider } from 'react-helmet-async';
 import '@/index.css';
 import { AppSkeleton } from '@/components/skeletons/AppSkeleton';
-import { CartProvider } from '@/context/CartContext';
 
+// Lazy Load Pages
 const LazyApp = lazy(() => import('@/App'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const ShopPage = lazy(() => import('@/pages/ShopPage'));
@@ -45,12 +45,11 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <HelmetProvider> {/* WRAPPER */}
-      <CartProvider>
-        <Suspense fallback={<AppSkeleton />}>
-          <RouterProvider router={router} />
-        </Suspense>
-      </CartProvider>
+    <HelmetProvider>
+      {/* Suspense handles the lazy loading of App and Pages */}
+      <Suspense fallback={<AppSkeleton />}>
+        <RouterProvider router={router} />
+      </Suspense>
     </HelmetProvider>
   </React.StrictMode>
 );

@@ -14,32 +14,38 @@ export const FilterModal = ({
   return (
     <AnimatePresence>
       {open && (
-        <>
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+          {/* 1. Backdrop (Click to close) */}
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
           
-          {/* Modal */}
+          {/* 2. The Popup Card (Centered) */}
           <motion.div
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-[70] bg-white rounded-t-[20px] shadow-2xl md:bottom-auto md:top-1/2 md:left-1/2 md:w-full md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl"
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", duration: 0.3 }}
+            className="relative bg-white w-full max-w-xs rounded-2xl shadow-2xl overflow-hidden z-10"
           >
-            <div className="p-6 pb-8">
-              {/* Mobile Pull Bar */}
-              <div className="w-10 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 md:hidden" />
-              
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-serif font-bold text-gray-900">Filter Collection</h2>
-                <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <X size={20} className="text-gray-500" />
-                </button>
-              </div>
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-lg font-serif font-bold text-gray-900">Filter Collection</h2>
+              <button 
+                onClick={onClose} 
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors bg-white shadow-sm border border-gray-100"
+              >
+                <X size={18} className="text-gray-600" />
+              </button>
+            </div>
 
-              <div className="flex flex-wrap gap-3">
+            {/* Options List */}
+            <div className="p-5 max-h-[50vh] overflow-y-auto">
+              <div className="flex flex-col gap-2">
                 {filterOptions.map((f) => (
                   <button
                     key={f.id}
@@ -47,34 +53,36 @@ export const FilterModal = ({
                       onFilterSelect(f.id);
                       onClose();
                     }}
-                    className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border ${
+                    className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 border text-left flex justify-between items-center ${
                       currentFilter === f.id
                         ? 'bg-[#B08D55] text-white border-[#B08D55] shadow-md'
                         : 'bg-white text-gray-600 border-gray-200 hover:border-[#B08D55] hover:text-[#B08D55]'
                     }`}
                   >
                     {f.name}
+                    {currentFilter === f.id && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded uppercase tracking-wider">Active</span>}
                   </button>
                 ))}
               </div>
+            </div>
               
-              <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-center">
-                <button 
-                  onClick={() => { onFilterSelect('All'); onClose(); }}
-                  className="text-xs font-bold text-gray-400 hover:text-gray-900 uppercase tracking-wider"
-                >
-                  Clear All
-                </button>
-                <button 
-                  onClick={onClose}
-                  className="bg-black text-white px-8 py-3 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-gray-800"
-                >
-                  View Results
-                </button>
-              </div>
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <button 
+                onClick={() => { onFilterSelect('All'); onClose(); }}
+                className="text-xs font-bold text-gray-500 hover:text-black uppercase tracking-wider px-4"
+              >
+                Reset
+              </button>
+              <button 
+                onClick={onClose}
+                className="bg-[#1A1A1A] text-white px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-black shadow-lg"
+              >
+                Apply
+              </button>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

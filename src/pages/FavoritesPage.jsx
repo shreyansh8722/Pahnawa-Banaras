@@ -1,28 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore'; // Use getDoc for individual items
+import { doc, getDocs, collection, query, where, documentId } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
-import { useFavorites } from '@/hooks/useFavorites'; // Import the hook
+import { useFavorites } from '@/hooks/useFavorites';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { CartModal } from '@/components/shop/CartModal';
-import { Heart, ArrowRight } from 'lucide-react';
+import { Heart, ArrowRight, ShoppingBag } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { AppSkeleton } from '@/components/skeletons/AppSkeleton';
 
 export default function FavoritesPage() {
   const { user } = useAuth();
   const { favorites, toggleFavorite, loading: favoritesLoading } = useFavorites();
+  const { addToCart } = useCart();
   const navigate = useNavigate();
   
   const [favProducts, setFavProducts] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
 
-  // Fetch Product Details for Favorite IDs
   useEffect(() => {
     const fetchFavoriteProducts = async () => {
+      // 1. If no favorites, clear list and stop
       if (favorites.length === 0) {
         setFavProducts([]);
         setLoadingData(false);
@@ -31,13 +33,24 @@ export default function FavoritesPage() {
 
       setLoadingData(true);
       try {
-        // Fetch all favorited products in parallel
-        const productPromises = favorites.map(id => getDoc(doc(db, 'products', id)));
-        const productSnaps = await Promise.all(productPromises);
+        // 2. CHUNKING LOGIC: Firestore limits 'in' queries to 10 items.
+        // We split the favorites array into chunks of 10.
+        const chunks = [];
+        for (let i = 0; i < favorites.length; i += 10) {
+          chunks.push(favorites.slice(i, i + 10));
+        }
+
+        // 3. Fetch all chunks in parallel
+        const promises = chunks.map(chunk => 
+          getDocs(query(collection(db, 'products'), where(documentId(), 'in', chunk)))
+        );
+
+        const snapshots = await Promise.all(promises);
         
-        const products = productSnaps
-          .filter(snap => snap.exists())
-          .map(snap => ({ id: snap.id, ...snap.data() }));
+        // 4. Combine results from all chunks into one array
+        const products = snapshots.flatMap(snap => 
+          snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        );
 
         setFavProducts(products);
       } catch (err) {
@@ -52,29 +65,17 @@ export default function FavoritesPage() {
     }
   }, [favorites, favoritesLoading]);
 
-  const addToCart = (item) => {
-    setCart(prev => [...prev, { ...item, quantity: 1 }]);
+  const handleAddToCart = (item) => {
+    addToCart({ ...item, quantity: 1 });
     setShowCart(true);
   };
 
   // Loading State
-  if (favoritesLoading || loadingData) {
-    return (
-      <div className="min-h-screen bg-white font-sans">
-        <Navbar cartCount={cart.length} onOpenCart={() => setShowCart(true)} />
-        <div className="max-w-7xl mx-auto px-4 py-12">
-           <div className="h-8 w-48 bg-gray-100 rounded mb-8 animate-pulse" />
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[1,2,3,4].map(i => <div key={i} className="aspect-[2/3] bg-gray-100 rounded-sm animate-pulse" />)}
-           </div>
-        </div>
-      </div>
-    );
-  }
+  if (favoritesLoading || loadingData) return <AppSkeleton />;
 
   return (
     <div className="min-h-screen bg-white font-sans text-brand-dark flex flex-col">
-      <Navbar cartCount={cart.length} onOpenCart={() => setShowCart(true)} />
+      <Navbar cartCount={0} onOpenCart={() => setShowCart(true)} />
 
       <div className="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-12 w-full">
         
@@ -115,20 +116,27 @@ export default function FavoritesPage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 gap-y-8 md:gap-x-8">
             {favProducts.map(item => (
-              <ProductCard 
-                key={item.id} 
-                item={item} 
-                onAddToCart={addToCart}
-                isFavorite={true} // It's in the wishlist, so it's true
-                onToggleFavorite={toggleFavorite}
-              />
+               <div key={item.id} className="group flex flex-col">
+                  <ProductCard 
+                    item={item} 
+                    onAddToCart={() => handleAddToCart(item)}
+                    isFavorite={true}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                  <button 
+                    onClick={() => handleAddToCart(item)}
+                    className="mt-2 w-full bg-white border border-gray-200 text-gray-600 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#B08D55] hover:text-white hover:border-[#B08D55] transition-all flex items-center justify-center gap-2 rounded-sm"
+                  >
+                     <ShoppingBag size={12} /> Move to Bag
+                  </button>
+               </div>
             ))}
           </div>
         )}
       </div>
 
       <Footer />
-      <CartModal open={showCart} onClose={() => setShowCart(false)} cart={cart} subtotal={0} />
+      <CartModal />
     </div>
   );
 }

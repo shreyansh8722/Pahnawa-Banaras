@@ -5,7 +5,15 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs))
 }
 
-// --- NEW: Image Compression Helper ---
+// --- NEW: Global Price Formatter ---
+export const formatPrice = (amount) => {
+  const price = Number(amount) || 0; // Force convert to Number
+  return new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
+// --- Image Compression Helper ---
 export const compressImage = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -17,7 +25,6 @@ export const compressImage = async (file) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Resize logic: Max width 1200px (good for web)
         const MAX_WIDTH = 1200;
         const scaleSize = MAX_WIDTH / img.width;
         const width = (scaleSize < 1) ? MAX_WIDTH : img.width;
@@ -27,7 +34,6 @@ export const compressImage = async (file) => {
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Convert to WebP at 75% quality
         canvas.toBlob((blob) => {
           if (!blob) {
             reject(new Error('Canvas is empty'));
