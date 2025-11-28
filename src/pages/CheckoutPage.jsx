@@ -7,22 +7,20 @@ import { auth } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
+import { AddressSelector } from '@/components/checkout/AddressSelector';
 
 export default function CheckoutPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { clearCart } = useCart(); // Use clearCart from context if available
+  const { clearCart } = useCart();
   
   const cart = state?.cart || [];
   const subtotal = state?.subtotal || 0;
   
-  // State for Multi-step Process
-  // Step 1: Shipping Details
-  // Step 2: Payment Method
   const [currentStep, setCurrentStep] = useState(1);
-  
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(true); // Default to true, toggle if addresses exist
 
   const [formData, setFormData] = useState({
     firstName: '', 
@@ -35,21 +33,39 @@ export default function CheckoutPage() {
     state: ''
   });
 
-  // Redirect if cart is empty
   useEffect(() => {
     if (!cart || cart.length === 0) {
       navigate('/shop');
     }
   }, [cart, navigate]);
 
+  // Check if user has addresses to decide whether to show form initially
+  // (Optional optimization: You could check this inside AddressSelector 
+  // and lift state up, but for now we default form to open)
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Validation before moving to Step 2
+  const handleAddressSelect = (addr) => {
+    // Map the saved address format to our form format
+    const [first, ...rest] = addr.name.split(' ');
+    setFormData({
+        firstName: first || '',
+        lastName: rest.join(' ') || '',
+        email: formData.email,
+        phone: addr.phone,
+        address: addr.street,
+        city: addr.city,
+        pincode: addr.pincode,
+        state: addr.state
+    });
+    // Visual feedback handled by AddressSelector prop, but we can also auto-advance or just close form
+    setShowAddressForm(false);
+  };
+
   const validateShipping = (e) => {
     e.preventDefault();
-    // Basic validation check
     if (formData.firstName && formData.address && formData.pincode && formData.phone) {
       setCurrentStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -61,17 +77,14 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
     try {
-      // Initialize Cloud Functions
       const functions = getFunctions();
       const createOrder = httpsCallable(functions, 'createOrder');
       
-      // Call the secure backend function
-      // This prevents users from tampering with prices on the frontend
       const result = await createOrder({
         items: cart.map(item => ({
             id: item.id,
             quantity: item.quantity,
-            selectedOptions: item.selectedOptions // Pass customizations
+            selectedOptions: item.selectedOptions
         })),
         shippingDetails: formData,
         paymentMethod: paymentMethod
@@ -80,10 +93,7 @@ export default function CheckoutPage() {
       const { orderId, success } = result.data;
 
       if (success) {
-        // Clear the cart locally since order is placed
         if (clearCart) clearCart();
-        
-        // Redirect to success page
         navigate('/order-success', { state: { orderId: orderId } });
       }
 
@@ -100,7 +110,6 @@ export default function CheckoutPage() {
       <Navbar />
 
       <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-        {/* Page Header */}
         <div className="mb-8 flex items-center gap-4">
           <button 
             onClick={() => currentStep === 1 ? navigate(-1) : setCurrentStep(1)} 
@@ -113,7 +122,6 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
           
-          {/* LEFT COLUMN - STEPS */}
           <div className="lg:col-span-7 space-y-6">
             
             {/* --- STEP 1: SHIPPING --- */}
@@ -134,28 +142,51 @@ export default function CheckoutPage() {
 
               <AnimatePresence>
                 {currentStep === 1 && (
-                  <motion.form 
+                  <motion.div 
                     initial={{ height: 0, opacity: 0 }} 
                     animate={{ height: 'auto', opacity: 1 }} 
                     exit={{ height: 0, opacity: 0 }}
-                    id="shipping-form" 
-                    onSubmit={validateShipping} 
-                    className="grid grid-cols-1 md:grid-cols-2 gap-5 overflow-hidden"
+                    className="overflow-hidden"
                   >
-                    <input required name="firstName" placeholder="First Name *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent transition-colors" onChange={handleInputChange} defaultValue={formData.firstName} />
-                    <input required name="lastName" placeholder="Last Name *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent transition-colors" onChange={handleInputChange} defaultValue={formData.lastName} />
-                    <input required name="email" type="email" placeholder="Email Address *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent md:col-span-2 transition-colors" value={formData.email} onChange={handleInputChange} />
-                    <input required name="phone" type="tel" placeholder="Phone Number *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent md:col-span-2 transition-colors" onChange={handleInputChange} defaultValue={formData.phone} />
-                    <input required name="address" placeholder="Address (House No, Building, Street) *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent md:col-span-2 transition-colors" onChange={handleInputChange} defaultValue={formData.address} />
-                    <input required name="city" placeholder="City *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent transition-colors" onChange={handleInputChange} defaultValue={formData.city} />
-                    <input required name="pincode" placeholder="Pincode *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent transition-colors" onChange={handleInputChange} defaultValue={formData.pincode} />
-                    
-                    <div className="md:col-span-2 mt-4">
-                        <button type="submit" className="w-full bg-black text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg rounded-sm flex justify-center items-center gap-2">
-                          Continue to Payment <ChevronRight size={16} />
-                        </button>
-                    </div>
-                  </motion.form>
+                     {/* Address Selector */}
+                     <AddressSelector 
+                        selectedAddress={formData}
+                        onSelect={handleAddressSelect}
+                        onAddNew={() => {
+                            setFormData(prev => ({...prev, firstName: '', address: '', pincode: ''})); // Clear basics
+                            setShowAddressForm(true);
+                        }}
+                     />
+
+                    {/* Manual Form */}
+                    {showAddressForm ? (
+                        <form id="shipping-form" onSubmit={validateShipping} className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                            <input required name="firstName" placeholder="First Name *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent" onChange={handleInputChange} value={formData.firstName} />
+                            <input required name="lastName" placeholder="Last Name *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent" onChange={handleInputChange} value={formData.lastName} />
+                            <input required name="email" type="email" placeholder="Email Address *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent md:col-span-2" value={formData.email} onChange={handleInputChange} />
+                            <input required name="phone" type="tel" placeholder="Phone Number *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent md:col-span-2" onChange={handleInputChange} value={formData.phone} />
+                            <input required name="address" placeholder="Address (House No, Building, Street) *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent md:col-span-2" onChange={handleInputChange} value={formData.address} />
+                            <input required name="city" placeholder="City *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent" onChange={handleInputChange} value={formData.city} />
+                            <input required name="pincode" placeholder="Pincode *" className="border border-gray-200 p-3 rounded-sm w-full text-sm focus:border-[#B08D55] outline-none bg-transparent" onChange={handleInputChange} value={formData.pincode} />
+                            
+                            <div className="md:col-span-2 mt-4">
+                                <button type="submit" className="w-full bg-black text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg rounded-sm flex justify-center items-center gap-2">
+                                Continue to Payment <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        // Summary of selected address when form is hidden (but still in step 1)
+                        <div className="bg-gray-50 p-4 border border-gray-200 rounded-sm">
+                            <p className="font-bold text-sm">{formData.firstName} {formData.lastName}</p>
+                            <p className="text-xs text-gray-600">{formData.address}</p>
+                            <p className="text-xs text-gray-600">{formData.city}, {formData.pincode}</p>
+                            <button onClick={() => validateShipping({ preventDefault: () => {} })} className="w-full mt-4 bg-black text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-all rounded-sm">
+                                Continue with this Address
+                            </button>
+                        </div>
+                    )}
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
@@ -174,37 +205,19 @@ export default function CheckoutPage() {
                     animate={{ height: 'auto', opacity: 1 }} 
                     className="space-y-4 overflow-hidden"
                   >
-                    {/* Online Payment Option */}
                     <label className={`flex items-center p-4 border rounded-sm cursor-pointer transition-all group ${paymentMethod === 'online' ? 'border-[#B08D55] bg-[#B08D55]/5' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <input 
-                        type="radio" 
-                        name="payment" 
-                        value="online" 
-                        checked={paymentMethod === 'online'} 
-                        onChange={() => setPaymentMethod('online')} 
-                        className="accent-[#B08D55] w-4 h-4" 
-                      />
+                      <input type="radio" name="payment" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="accent-[#B08D55] w-4 h-4" />
                       <div className="ml-4 flex-1">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-sm text-gray-900">Pay Online</span>
-                          <div className="flex gap-2 opacity-60">
-                             <CreditCard size={20} />
-                          </div>
+                          <CreditCard size={20} className="text-gray-400"/>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Credit/Debit Card, UPI, Netbanking</p>
+                        <p className="text-xs text-gray-500 mt-1">UPI, Cards, Netbanking (Secure)</p>
                       </div>
                     </label>
 
-                    {/* COD Option */}
                     <label className={`flex items-center p-4 border rounded-sm cursor-pointer transition-all group ${paymentMethod === 'cod' ? 'border-[#B08D55] bg-[#B08D55]/5' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <input 
-                        type="radio" 
-                        name="payment" 
-                        value="cod" 
-                        checked={paymentMethod === 'cod'} 
-                        onChange={() => setPaymentMethod('cod')} 
-                        className="accent-[#B08D55] w-4 h-4" 
-                      />
+                      <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="accent-[#B08D55] w-4 h-4" />
                       <div className="ml-4">
                         <span className="font-bold text-sm text-gray-900">Cash on Delivery</span>
                         <p className="text-xs text-gray-500 mt-1">Pay in cash upon delivery</p>
@@ -216,7 +229,7 @@ export default function CheckoutPage() {
                       disabled={isProcessing}
                       className="w-full mt-6 bg-[#B08D55] text-white py-4 text-sm font-bold uppercase tracking-widest hover:bg-[#8c6a40] transition-all shadow-lg disabled:bg-gray-400 flex justify-center items-center gap-2 rounded-sm"
                     >
-                      {isProcessing ? 'Processing Order...' : `Pay ₹${subtotal.toLocaleString('en-IN')}`}
+                      {isProcessing ? 'Processing...' : `Pay ₹${subtotal.toLocaleString('en-IN')}`}
                     </button>
                     
                     <div className="flex items-center justify-center gap-2 text-gray-400 text-[10px] uppercase tracking-wider mt-4">
@@ -237,11 +250,7 @@ export default function CheckoutPage() {
                 {cart.map((item) => (
                   <div key={item.cartItemId || item.id} className="flex gap-4">
                     <div className="w-16 h-20 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0 border border-gray-100">
-                      <img 
-                        src={item.featuredImageUrl || item.imageUrls?.[0]} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover" 
-                      />
+                      <img src={item.featuredImageUrl || item.imageUrls?.[0]} alt={item.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1">
                       <h4 className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">{item.name}</h4>
@@ -249,7 +258,6 @@ export default function CheckoutPage() {
                         <div className="text-xs text-gray-500 space-y-0.5">
                             <p>Qty: {item.quantity}</p>
                             {item.selectedOptions?.fallPico && <p>+ Fall/Pico</p>}
-                            {item.selectedOptions?.blouseStitching && <p>+ Stitching</p>}
                         </div>
                         <p className="text-sm font-bold text-gray-900">₹{(item.price * item.quantity).toLocaleString('en-IN')}</p>
                       </div>
@@ -259,22 +267,12 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-2 text-sm border-t border-gray-100 pt-4">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Shipping</span>
-                  <span className="text-green-700 font-bold text-xs uppercase">Free</span>
-                </div>
-                <div className="flex justify-between font-bold text-xl text-gray-900 pt-4 border-t border-gray-100 mt-2">
-                  <span>Total</span>
-                  <span>₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
+                <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>₹{subtotal.toLocaleString('en-IN')}</span></div>
+                <div className="flex justify-between text-gray-600"><span>Shipping</span><span className="text-green-700 font-bold text-xs uppercase">Free</span></div>
+                <div className="flex justify-between font-bold text-xl text-gray-900 pt-4 border-t border-gray-100 mt-2"><span>Total</span><span>₹{subtotal.toLocaleString('en-IN')}</span></div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
       <Footer />

@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Heart, Check, Zap, ShieldCheck, Truck, RotateCcw, 
-  ShoppingBag, Ruler, AlertCircle, XCircle, Share2 
+  ShoppingBag, Ruler, XCircle, Share2 
 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
@@ -17,6 +17,7 @@ import { ProductRecommendations } from '@/components/shop/ProductRecommendations
 import { RecentlyViewed } from '@/components/shop/RecentlyViewed'; 
 import { SizeChartModal } from '@/components/shop/SizeChartModal';
 import { AppSkeleton } from '@/components/skeletons/AppSkeleton';
+import { StickyActionBar } from '@/components/shop/StickyActionBar'; // NEW IMPORT
 import { useFavorites } from '@/hooks/useFavorites';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,7 +29,6 @@ import { formatPrice } from '@/lib/utils';
 export default function ProductDetailsPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
-  
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { favorites, toggleFavorite } = useFavorites();
@@ -46,26 +46,24 @@ export default function ProductDetailsPage() {
     blouseStitching: false
   });
 
+  // REAL-TIME LISTENER FOR STOCK UPDATES
   useEffect(() => {
-    const fetchProduct = async () => {
-      setLoading(true);
-      try {
-        if (!productId) return;
-        const snap = await getDoc(doc(db, 'products', productId));
-        if (snap.exists()) {
-          setProduct({ id: snap.id, ...snap.data() });
-        } else {
-          setProduct(null);
-        }
-        window.scrollTo(0, 0);
-      } catch (err) {
-        console.error("Error fetching product:", err);
+    if (!productId) return;
+    setLoading(true);
+    
+    const unsub = onSnapshot(doc(db, 'products', productId), (doc) => {
+      if (doc.exists()) {
+        setProduct({ id: doc.id, ...doc.data() });
+      } else {
         setProduct(null);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchProduct();
+      setLoading(false);
+    }, (error) => {
+      console.error("Error listening to product:", error);
+      setLoading(false);
+    });
+
+    return () => unsub(); // Cleanup listener on unmount
   }, [productId]);
 
   useEffect(() => {
@@ -88,8 +86,8 @@ export default function ProductDetailsPage() {
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    if (!user) { openLoginModal(); return; }
-    if (!product) return;
+    // We allow guests to add to cart now, but you can uncomment below to force login
+    // if (!user) { openLoginModal(); return; } 
     
     const cartItem = { ...product, price: finalPrice, selectedOptions: customizations, quantity: 1 };
     addToCart(cartItem);
@@ -100,7 +98,6 @@ export default function ProductDetailsPage() {
   const handleBuyNow = () => {
     if (isOutOfStock) return;
     if (!user) { openLoginModal(); return; }
-    if (!product) return;
 
     const cartItem = { ...product, price: finalPrice, selectedOptions: customizations, quantity: 1 };
     navigate('/checkout', { state: { cart: [cartItem], subtotal: finalPrice } });
@@ -132,7 +129,7 @@ export default function ProductDetailsPage() {
   if (!product) return <div className="min-h-screen flex items-center justify-center">Product Not Found</div>;
 
   const productSchema = {
-    "@context": "https://schema.org/",
+    "@context": "[https://schema.org/](https://schema.org/)",
     "@type": "Product",
     "name": product.name,
     "image": product.featuredImageUrl,
@@ -142,7 +139,7 @@ export default function ProductDetailsPage() {
       "@type": "Offer", 
       "price": finalPrice, 
       "priceCurrency": "INR", 
-      "availability": isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock" 
+      "availability": isOutOfStock ? "[https://schema.org/OutOfStock](https://schema.org/OutOfStock)" : "[https://schema.org/InStock](https://schema.org/InStock)" 
     }
   };
 
@@ -158,16 +155,13 @@ export default function ProductDetailsPage() {
 
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 mb-10 px-0 md:px-8 pt-0 pb-12">
         
-        {/* GALLERY */}
         <div className="md:col-span-7 w-full">
           <ProductGallery images={images} name={product.name} />
         </div>
 
-        {/* DETAILS */}
         <div className="md:col-span-5 px-4 md:px-8">
           <div className="md:sticky md:top-28">
             
-            {/* Header Section */}
             <div className="mb-6 mt-4 md:mt-0">
               <div className="flex justify-between items-start mb-2">
                   <h1 className="font-serif text-2xl md:text-4xl text-gray-900 leading-tight flex-1 pr-2">{product.name}</h1>
@@ -181,7 +175,6 @@ export default function ProductDetailsPage() {
                   </div>
               </div>
               
-              {/* Stock & Price */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="text-[10px] text-gray-500 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-sm font-bold">
                     {product.subCategory || 'Banarasi'}
@@ -219,8 +212,6 @@ export default function ProductDetailsPage() {
 
             <ProductCustomization options={customizations} onOptionsChange={setCustomizations} />
             
-            {/* --- ACTIONS (Unified for Mobile & Desktop) --- */}
-            {/* Changed from hidden/fixed to standard flow */}
             <div className="flex gap-3 mb-8 mt-6 items-stretch">
               <button 
                 onClick={handleAddToCart} 
@@ -256,9 +247,7 @@ export default function ProductDetailsPage() {
         </div>
       </div>
 
-      {/* Recommendations - Fixed Alignment */}
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 w-full border-t border-gray-100 pt-10 pb-20">
-          {/* Removed 'text-center' from here to fix misalignment if needed, but ProductRecommendations handles its own header */}
           <ProductRecommendations title="You May Also Like" category={product.subCategory || product.category} currentProductId={product.id} type="related" />
       </div>
 
@@ -266,6 +255,14 @@ export default function ProductDetailsPage() {
 
       <SizeChartModal isOpen={showSizeChart} onClose={() => setShowSizeChart(false)} category={product.subCategory} />
       
+      {/* Sticky Mobile Action Bar */}
+      <StickyActionBar 
+        product={product} 
+        isOutOfStock={isOutOfStock} 
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow} 
+      />
+
       <AnimatePresence>
         {showToast && (
           <motion.div 

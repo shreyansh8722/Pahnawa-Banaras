@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, startAfter } from 'firebase/firestore';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { FilterModal } from '@/components/home/FilterModal'; 
-import { Filter, SlidersHorizontal, ChevronDown, ArrowDownUp, Check } from 'lucide-react';
+import { Filter, SlidersHorizontal, Loader2, ArrowDownUp, Check, ChevronDown } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useCart } from '@/context/CartContext';
 import { SEO } from '@/components/SEO';
@@ -21,6 +21,8 @@ const FILTER_OPTIONS = [
   { id: 'Fabric', name: 'Fabrics' },
 ];
 
+const PRODUCTS_PER_PAGE = 12;
+
 const SORT_OPTIONS = [
   { id: 'newest', label: 'Newest Arrivals' },
   { id: 'price-low', label: 'Price: Low to High' },
@@ -30,16 +32,19 @@ const SORT_OPTIONS = [
 export default function ShopPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('cat') || 'All';
-  const navigate = useNavigate();
   
   const [products, setProducts] = useState([]);
+  const [lastDoc, setLastDoc] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // Sorting State
   const [sortBy, setSortBy] = useState('newest');
-  const [isSortOpen, setIsSortOpen] = useState(false); // NEW State
-  
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef(null);
-  
+
   const { addToCart } = useCart();
   const { favorites, toggleFavorite } = useFavorites();
 
@@ -54,45 +59,71 @@ export default function ShopPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Reset when Category or Sort changes
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const productsRef = collection(db, 'products');
-        let q;
+    setProducts([]);
+    setLastDoc(null);
+    setHasMore(true);
+    fetchProducts(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryParam, sortBy]);
 
-        if (categoryParam === 'All' || !categoryParam) {
-          q = query(productsRef, orderBy('createdAt', 'desc'));
-        } else {
-          let dbCategory = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
-          if (dbCategory.endsWith('s')) dbCategory = dbCategory.slice(0, -1); 
-          q = query(productsRef, where('subCategory', '==', dbCategory));
-        }
+  const fetchProducts = async (isInitial = false) => {
+    try {
+      if (isInitial) setLoading(true);
+      else setLoadingMore(true);
 
-        const snap = await getDocs(q);
-        const fetchedProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setProducts(fetchedProducts);
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
+      const productsRef = collection(db, 'products');
+      let constraints = [];
+
+      // 1. Category Filter
+      if (categoryParam !== 'All') {
+        let dbCategory = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
+        if (dbCategory.endsWith('s')) dbCategory = dbCategory.slice(0, -1);
+        constraints.push(where('subCategory', '==', dbCategory));
       }
-    };
-    fetchProducts();
-  }, [categoryParam]);
 
-  const sortedProducts = useMemo(() => {
-    let sorted = [...products];
-    switch (sortBy) {
-      case 'price-low':
-        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-      case 'price-high':
-        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-      case 'newest':
-      default:
-        return sorted.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      // 2. Sorting
+      // Note: Firestore requires an index for 'subCategory' + 'price' or 'createdAt'
+      if (sortBy === 'price-low') {
+        constraints.push(orderBy('price', 'asc'));
+      } else if (sortBy === 'price-high') {
+        constraints.push(orderBy('price', 'desc'));
+      } else {
+        constraints.push(orderBy('createdAt', 'desc'));
+      }
+
+      // 3. Pagination
+      constraints.push(limit(PRODUCTS_PER_PAGE));
+      if (!isInitial && lastDoc) {
+        constraints.push(startAfter(lastDoc));
+      }
+
+      const q = query(productsRef, ...constraints);
+      const snap = await getDocs(q);
+      
+      const fetchedProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      if (snap.docs.length < PRODUCTS_PER_PAGE) {
+        setHasMore(false);
+      }
+      
+      setLastDoc(snap.docs[snap.docs.length - 1]);
+      
+      if (isInitial) {
+        setProducts(fetchedProducts);
+      } else {
+        setProducts(prev => [...prev, ...fetchedProducts]);
+      }
+
+    } catch (err) {
+      console.error("Fetch error:", err);
+      // NOTE: If you see an error about 'indexes', open the link in console to create it in Firebase
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-  }, [products, sortBy]);
+  };
 
   const handleFilterSelect = (id) => {
     if (id === 'All') setSearchParams({});
@@ -103,7 +134,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans text-brand-dark flex flex-col">
-      <SEO title={`${pageTitle} - Pahnawa Banaras`} />
+      <SEO title={`${pageTitle} - Collection`} />
       <Navbar />
 
       {/* Header */}
@@ -120,23 +151,21 @@ export default function ShopPage() {
 
       {/* Control Bar */}
       <div className="sticky top-[60px] md:top-[80px] z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 py-3 px-4 md:px-8 flex justify-between items-center shadow-sm">
-        
-        {/* Filter Button */}
         <button 
           onClick={() => setIsFilterOpen(true)}
           className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-600 border border-gray-200 px-4 py-2 rounded-sm hover:border-[#B08D55] hover:text-[#B08D55] transition-all"
         >
-          <SlidersHorizontal size={14} /> Filter
+          <SlidersHorizontal size={14} /> <span className="hidden sm:inline">Filter</span>
         </button>
-
-        {/* Custom Sort Dropdown */}
+        
+        {/* Sort Dropdown */}
         <div className="relative" ref={sortRef}>
             <button 
               onClick={() => setIsSortOpen(!isSortOpen)}
               className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-800 hover:text-[#B08D55] transition-colors"
             >
                <ArrowDownUp size={14} className="text-gray-400" />
-               <span className="hidden sm:inline">Sort By:</span>
+               <span className="hidden sm:inline">Sort:</span>
                <span>{SORT_OPTIONS.find(o => o.id === sortBy)?.label}</span>
                <ChevronDown size={12} className={`text-gray-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -170,7 +199,6 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* Product Grid */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 flex-grow w-full min-h-[50vh]">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
@@ -178,24 +206,37 @@ export default function ShopPage() {
                <div key={i} className="w-full aspect-[2/3] bg-gray-100 animate-pulse rounded-sm" />
             ))}
           </div>
-        ) : sortedProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-20">
             <Filter size={48} className="mx-auto text-gray-200 mb-4" />
-            <p className="text-gray-400 font-serif text-xl mb-4">No products found.</p>
-            <button onClick={() => handleFilterSelect('All')} className="text-[#B08D55] underline uppercase tracking-widest text-xs">View All Collections</button>
+            <p className="text-gray-400 font-serif text-xl">No products found.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-10 md:gap-x-8 md:gap-y-12">
-            {sortedProducts.map(item => (
-              <ProductCard 
-                key={item.id} 
-                item={item} 
-                onAddToCart={() => addToCart(item)}
-                isFavorite={favorites.includes(item.id)}
-                onToggleFavorite={toggleFavorite}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-10 md:gap-x-8 md:gap-y-12">
+              {products.map(item => (
+                <ProductCard 
+                  key={item.id} 
+                  item={item} 
+                  onAddToCart={() => addToCart(item)}
+                  isFavorite={favorites.includes(item.id)}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ))}
+            </div>
+            
+            {hasMore && (
+              <div className="mt-16 text-center">
+                <button 
+                  onClick={() => fetchProducts(false)} 
+                  disabled={loadingMore}
+                  className="bg-white border border-gray-200 px-8 py-3 text-xs font-bold uppercase tracking-widest hover:border-[#B08D55] hover:text-[#B08D55] transition-all disabled:opacity-50 min-w-[150px]"
+                >
+                  {loadingMore ? <Loader2 className="animate-spin mx-auto" size={16} /> : 'Load More'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -206,7 +247,6 @@ export default function ShopPage() {
         onFilterSelect={handleFilterSelect}
         filterOptions={FILTER_OPTIONS}
       />
-
       <Footer />
     </div>
   );
