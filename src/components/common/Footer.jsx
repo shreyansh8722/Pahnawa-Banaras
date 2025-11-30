@@ -1,141 +1,140 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Facebook, Twitter, MapPin, Mail, Phone, Loader2, Check } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore'; 
-import { db } from '@/lib/firebase';
+import { Instagram, Facebook, Youtube, Twitter, Mail, MapPin, Phone, ArrowRight } from 'lucide-react';
+import Logo from '../../assets/logo.png'; // Ensure you have a white/light version of your logo if possible, or use filter
 
 export const Footer = () => {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle');
-  
-  // Dynamic Settings State
-  const [config, setConfig] = useState({
-    supportEmail: "hello@pahnawa.com",
-    supportPhone: "+91 98765 43210",
-    address: "Assi Ghat, Varanasi, 221005",
-    instagram: "#",
-    facebook: "#",
-    twitter: "#"
-  });
-
-  // Fetch Settings
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'global'));
-        if (snap.exists()) {
-          setConfig(prev => ({ ...prev, ...snap.data() }));
-        }
-      } catch (err) { console.error(err); }
-    };
-    fetchSettings();
-  }, []);
-
-  const handleSubscribe = async () => {
-    if (!email || !email.includes('@')) return;
-    setStatus('loading');
-    try {
-      await addDoc(collection(db, 'subscribers'), {
-        email,
-        joinedAt: serverTimestamp(),
-        source: 'footer'
-      });
-      setStatus('success');
-      setEmail('');
-    } catch (error) {
-      setStatus('error');
-    }
-  };
+  const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#1A1A1A] text-white py-16 px-6 md:px-12 text-center md:text-left mt-auto">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="bg-heritage-charcoal text-heritage-paper pt-24 pb-12 border-t border-heritage-gold/20">
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12">
         
-        {/* Brand Column */}
-        <div className="md:col-span-1 flex flex-col items-center md:items-start">
-          <Link to="/" className="mb-6 group">
-             <h2 className="font-serif text-3xl text-[#B08D55] group-hover:text-white transition-colors">Pahnawa</h2>
-             <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 mt-1">Banaras</p>
-          </Link>
-          <p className="text-gray-400 text-sm leading-relaxed font-light mb-6">
-            Bridging the gap between heritage and you. We bring the finest handwoven Banarasi silk directly from the master weavers of Varanasi to your wardrobe.
-          </p>
-          <div className="flex gap-4 text-gray-400">
-            <a href={config.instagram} target="_blank" rel="noreferrer" className="hover:text-white hover:scale-110 transition-all"><Instagram size={20} /></a>
-            <a href={config.facebook} target="_blank" rel="noreferrer" className="hover:text-white hover:scale-110 transition-all"><Facebook size={20} /></a>
-            <a href={config.twitter} target="_blank" rel="noreferrer" className="hover:text-white hover:scale-110 transition-all"><Twitter size={20} /></a>
+        {/* TOP SECTION: Brand & Newsletter */}
+        <div className="flex flex-col lg:flex-row justify-between gap-16 mb-20">
+          
+          {/* Brand Story */}
+          <div className="lg:w-1/3">
+            <Link to="/" className="inline-block mb-8">
+              {/* Using a brightness filter to make the logo white for dark footer */}
+              <img src={Logo} alt="Pahnawa Banaras" className="h-50 brightness-0 invert opacity-90" />
+            </Link>
+            <p className="text-heritage-paper/70 font-sans text-sm leading-relaxed mb-8 max-w-sm">
+              Weaving the timeless tales of Varanasi into every yard of silk. Pahnawa Banaras is dedicated to preserving the ancient art of handloom, bringing you heirlooms that transcend generations.
+            </p>
+            <div className="flex gap-6">
+              <SocialIcon icon={<Instagram size={20} />} href="#" />
+              <SocialIcon icon={<Facebook size={20} />} href="#" />
+              <SocialIcon icon={<Youtube size={20} />} href="#" />
+              <SocialIcon icon={<Twitter size={20} />} href="#" />
+            </div>
+          </div>
+
+          {/* Newsletter - The "Join the Club" feel */}
+          <div className="lg:w-1/3 lg:ml-auto">
+            <h4 className="font-serif italic text-2xl mb-6">Join the Circle</h4>
+            <p className="text-heritage-paper/60 text-xs uppercase tracking-widest mb-6">
+              Subscribe to receive updates on new arrivals, special offers, and weaver stories.
+            </p>
+            <div className="relative group">
+              <input 
+                type="email" 
+                placeholder="Your Email Address" 
+                className="w-full bg-transparent border-b border-heritage-paper/30 py-4 text-heritage-paper placeholder:text-heritage-paper/30 focus:outline-none focus:border-heritage-gold transition-colors"
+              />
+              <button className="absolute right-0 top-4 text-heritage-paper/50 hover:text-heritage-gold transition-colors">
+                <ArrowRight size={20} />
+              </button>
+            </div>
           </div>
         </div>
-        
-        {/* Links Column */}
-        <div>
-          <h4 className="uppercase tracking-[0.2em] text-xs font-bold mb-6 text-[#B08D55]">Explore</h4>
-          <ul className="space-y-3 text-sm text-gray-300 font-light">
-            <li><Link to="/about" className="hover:text-[#B08D55] transition">Our Story</Link></li>
-            <li><Link to="/shop?cat=saree" className="hover:text-[#B08D55] transition">Banarasi Sarees</Link></li>
-            <li><Link to="/shop?cat=lehenga" className="hover:text-[#B08D55] transition">Bridal Lehengas</Link></li>
-            <li><Link to="/journal" className="hover:text-[#B08D55] transition">The Journal</Link></li>
-            <li><Link to="/faq" className="hover:text-[#B08D55] transition">FAQs</Link></li>
-            <li><Link to="/contact" className="hover:text-[#B08D55] transition">Contact Us</Link></li>
-          </ul>
-        </div>
 
-        {/* Contact Column - DYNAMIC */}
-        <div>
-          <h4 className="uppercase tracking-[0.2em] text-xs font-bold mb-6 text-[#B08D55]">Contact</h4>
-          <ul className="space-y-4 text-sm text-gray-300 font-light">
-            <li className="flex items-start justify-center md:justify-start gap-3">
-              <MapPin size={16} className="mt-1 text-[#B08D55] shrink-0" />
-              <span className="whitespace-pre-line text-left">{config.address}</span>
-            </li>
-            <li className="flex items-center justify-center md:justify-start gap-3">
-              <Phone size={16} className="text-[#B08D55] shrink-0" />
-              <span>{config.supportPhone}</span>
-            </li>
-            <li className="flex items-center justify-center md:justify-start gap-3">
-              <Mail size={16} className="text-[#B08D55] shrink-0" />
-              <span>{config.supportEmail}</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Newsletter Column */}
-        <div>
-          <h4 className="uppercase tracking-[0.2em] text-xs font-bold mb-6 text-[#B08D55]">Newsletter</h4>
-          <p className="text-gray-400 text-sm mb-4 font-light">Subscribe for exclusive updates.</p>
+        {/* MIDDLE SECTION: Links Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 border-t border-heritage-paper/10 pt-16 mb-20">
           
-          {status === 'success' ? (
-            <div className="bg-green-900/30 border border-green-800 p-3 rounded text-green-400 text-sm flex items-center gap-2 animate-in fade-in">
-              <Check size={16} /> Subscribed!
+          {/* Column 1 */}
+          <div className="flex flex-col gap-6">
+            <h5 className="font-serif text-lg italic text-heritage-gold">Shop</h5>
+            <FooterLink to="/shop?cat=saree">Sarees</FooterLink>
+            <FooterLink to="/shop?cat=lehenga">Lehengas</FooterLink>
+            <FooterLink to="/shop?cat=suit">Unstitched Suits</FooterLink>
+            <FooterLink to="/shop?cat=men">Men's Collection</FooterLink>
+            <FooterLink to="/shop?sort=newest">New Arrivals</FooterLink>
+          </div>
+
+          {/* Column 2 */}
+          <div className="flex flex-col gap-6">
+            <h5 className="font-serif text-lg italic text-heritage-gold">Company</h5>
+            <FooterLink to="/about">Our Story</FooterLink>
+            <FooterLink to="/weavers">The Weaver's Project</FooterLink>
+            <FooterLink to="/sustainability">Sustainability</FooterLink>
+            <FooterLink to="/careers">Careers</FooterLink>
+            <FooterLink to="/press">Press</FooterLink>
+          </div>
+
+          {/* Column 3 */}
+          <div className="flex flex-col gap-6">
+            <h5 className="font-serif text-lg italic text-heritage-gold">Assistance</h5>
+            <FooterLink to="/contact">Contact Us</FooterLink>
+            <FooterLink to="/shipping">Shipping & Delivery</FooterLink>
+            <FooterLink to="/returns">Returns & Exchange</FooterLink>
+            <FooterLink to="/care">Garment Care</FooterLink>
+            <FooterLink to="/faqs">FAQs</FooterLink>
+          </div>
+
+          {/* Column 4: Contact Info */}
+          <div className="flex flex-col gap-6">
+            <h5 className="font-serif text-lg italic text-heritage-gold">Visit Us</h5>
+            <div className="flex items-start gap-4 text-heritage-paper/70 text-sm">
+              <MapPin size={18} className="shrink-0 mt-1" />
+              <span>
+                B 21/100, Kamachha Road,<br />
+                Bhelupur, Varanasi,<br />
+                Uttar Pradesh 221010
+              </span>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex border-b border-gray-700 pb-2 focus-within:border-[#B08D55] transition-colors">
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email" 
-                  className="bg-transparent w-full outline-none text-sm placeholder-gray-600 text-white font-light" 
-                />
-                <button onClick={handleSubscribe} className="text-xs font-bold uppercase text-[#B08D55] hover:text-white transition">
-                  {status === 'loading' ? <Loader2 size={16} className="animate-spin"/> : 'Join'}
-                </button>
-              </div>
+            <div className="flex items-center gap-4 text-heritage-paper/70 text-sm">
+              <Phone size={18} />
+              <span>+91 98765 43210</span>
             </div>
-          )}
+            <div className="flex items-center gap-4 text-heritage-paper/70 text-sm">
+              <Mail size={18} />
+              <span>hello@pahnawabanaras.com</span>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      {/* Bottom Bar */}
-      <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-gray-800 text-center text-xs text-gray-600 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p>© 2025 Pahnawa Banaras. All Rights Reserved.</p>
-        <div className="flex gap-6">
-            <Link to="/privacy" className="hover:text-[#B08D55] transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-[#B08D55] transition-colors">Terms of Service</Link>
-            <Link to="/returns" className="hover:text-[#B08D55] transition-colors">Return Policy</Link>
+
+        {/* BOTTOM: Copyright & Legal */}
+        <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-heritage-paper/10 gap-4">
+          <div className="text-[10px] uppercase tracking-widest text-heritage-paper/40">
+            © {currentYear} Pahnawa Banaras. All Rights Reserved.
+          </div>
+          <div className="flex gap-8 text-[10px] uppercase tracking-widest text-heritage-paper/40">
+            <Link to="/privacy" className="hover:text-heritage-gold transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-heritage-gold transition-colors">Terms of Service</Link>
+          </div>
         </div>
+
       </div>
     </footer>
   );
 };
+
+// Helper Components
+const SocialIcon = ({ icon, href }) => (
+  <a 
+    href={href} 
+    className="w-10 h-10 rounded-full border border-heritage-paper/20 flex items-center justify-center text-heritage-paper/60 hover:text-heritage-charcoal hover:bg-heritage-gold hover:border-heritage-gold transition-all duration-300"
+  >
+    {icon}
+  </a>
+);
+
+const FooterLink = ({ to, children }) => (
+  <Link 
+    to={to} 
+    className="text-sm text-heritage-paper/70 hover:text-heritage-gold hover:translate-x-2 transition-all duration-300 font-sans"
+  >
+    {children}
+  </Link>
+);

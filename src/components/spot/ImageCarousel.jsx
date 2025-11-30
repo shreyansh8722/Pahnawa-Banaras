@@ -42,9 +42,8 @@ export const ImageCarousel = memo(({ images = [], spotName = 'Spot' }) => {
   };
 
   const handleDragEnd = (event, info) => {
-    // --- 1. MADE SWIPE DETECTION MORE SENSITIVE ---
-    const swipeThreshold = 40; // Was 50
-    const velocityThreshold = 150; // Was 200
+    const swipeThreshold = 40; 
+    const velocityThreshold = 150; 
     const offset = info.offset.x;
     const velocity = info.velocity.x;
 
@@ -57,7 +56,6 @@ export const ImageCarousel = memo(({ images = [], spotName = 'Spot' }) => {
         paginate(-1);
       }
     }
-    // If neither, the `animate` prop will snap it back
   };
 
   if (imageCount === 0) {
@@ -88,7 +86,6 @@ export const ImageCarousel = memo(({ images = [], spotName = 'Spot' }) => {
         dragMomentum={false}
         onDragEnd={handleDragEnd}
         animate={{ x: `-${index * 100}%` }}
-        // --- 2. SWITCHED TO A 'TWEEN' FOR A FASTER, 'SNAPPIER' FEEL ---
         transition={{ type: 'tween', duration: 0.3, ease: 'easeOut' }}
       >
         {validImages.map((src, i) => {
@@ -101,7 +98,8 @@ export const ImageCarousel = memo(({ images = [], spotName = 'Spot' }) => {
                   src={src}
                   alt={`${spotName} image ${i + 1}`}
                   loading={i === index ? 'eager' : 'lazy'}
-                  fetchPriority={i === index ? 'high' : 'auto'}
+                  // FIX: Changed from fetchPriority to fetchpriority
+                  fetchpriority={i === index ? 'high' : 'auto'}
                   className="w-full h-full object-cover"
                   draggable="false"
                   onDragStart={(e) => e.preventDefault()}
@@ -114,10 +112,8 @@ export const ImageCarousel = memo(({ images = [], spotName = 'Spot' }) => {
         })}
       </motion.div>
 
-      {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
 
-      {/* Image Counter */}
       {imageCount > 1 && (
         <div className="absolute bottom-8 right-4 rounded-full bg-black/40 backdrop-blur-md px-3 py-1 text-white text-xs font-medium pointer-events-none shadow-lg">
           {index + 1} / {imageCount}

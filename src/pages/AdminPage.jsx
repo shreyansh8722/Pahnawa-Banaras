@@ -1,28 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import { 
   LayoutDashboard, ShoppingBag, Package, Users, 
   Settings, LogOut, Menu, X, Shield, MessageSquare, 
-  Ticket, LayoutTemplate, Globe, CheckCircle, AlertCircle 
+  Ticket, LayoutTemplate, Globe, CheckCircle, AlertCircle,
+  Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Admin Components
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
-import { OrderManager } from '@/components/admin/OrderManager';
-import { ProductManager } from '@/components/admin/ProductManager';
-import { InventoryManager } from '@/components/admin/InventoryManager';
-import { MessageInbox } from '@/components/admin/MessageInbox';
-import { CouponManager } from '@/components/admin/CouponManager';
-import { StorefrontManager } from '@/components/admin/StorefrontManager';
-import { SettingsManager } from '@/components/admin/SettingsManager';
-import { SubscriberManager } from '@/components/admin/SubscriberManager';
-import { ContentManager } from '@/components/admin/ContentManager'; 
+import { AdminDashboard } from '../components/admin/AdminDashboard';
+import { OrderManager } from '../components/admin/OrderManager';
+import { ProductManager } from '../components/admin/ProductManager';
+import { InventoryManager } from '../components/admin/InventoryManager';
+import { MessageInbox } from '../components/admin/MessageInbox';
+import { CouponManager } from '../components/admin/CouponManager';
+import { StorefrontManager } from '../components/admin/StorefrontManager';
+import { SettingsManager } from '../components/admin/SettingsManager';
+import { SubscriberManager } from '../components/admin/SubscriberManager';
+import { ContentManager } from '../components/admin/ContentManager'; 
+import { SeedData } from '../components/admin/SeedData'; 
 
 const ADMIN_EMAIL = "shreyanshtripathi71@gmail.com"; 
 
-// --- FIXED: NavItem Moved Outside Component to prevent re-renders ---
+// --- NavItem Component ---
 const NavItem = ({ id, icon: Icon, label, isActive, onClick }) => (
   <button
     onClick={() => onClick(id)}
@@ -39,7 +41,7 @@ const NavItem = ({ id, icon: Icon, label, isActive, onClick }) => (
       <motion.div 
         layoutId="active-pill" 
         className="ml-auto w-1.5 h-1.5 bg-white rounded-full" 
-        transition={{ type: "spring", stiffness: 500, damping: 30 }} // Snappy spring
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
       />
     )}
   </button>
@@ -100,6 +102,7 @@ export default function AdminPage() {
       case 'subscribers': return <SubscriberManager {...props} />;
       case 'messages': return <MessageInbox {...props} />;
       case 'content': return <ContentManager {...props} />;
+      case 'database': return <SeedData {...props} />; // New Database Tab
       default: return <AdminDashboard {...props} />;
     }
   };
@@ -152,6 +155,10 @@ export default function AdminPage() {
           <NavItem id="content" icon={Menu} label="Menu" isActive={activeTab === 'content'} onClick={handleNavClick} />
           <NavItem id="storefront" icon={LayoutTemplate} label="Storefront" isActive={activeTab === 'storefront'} onClick={handleNavClick} />
           <NavItem id="settings" icon={Globe} label="Settings" isActive={activeTab === 'settings'} onClick={handleNavClick} />
+          
+          {/* New System Section */}
+          <p className="px-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3 mt-8">System</p>
+          <NavItem id="database" icon={Database} label="Database Tools" isActive={activeTab === 'database'} onClick={handleNavClick} />
         </nav>
 
         <div className="p-4 border-t border-gray-800 bg-[#151515]">
@@ -168,18 +175,22 @@ export default function AdminPage() {
           <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
              <div>
                <h2 className="text-3xl font-bold text-gray-900 capitalize font-serif tracking-tight">
-                   {activeTab}
+                   {activeTab === 'database' ? 'Database Tools' : activeTab}
                </h2>
-               <p className="text-sm text-gray-500 mt-1">Manage your {activeTab} and view performance.</p>
+               <p className="text-sm text-gray-500 mt-1">
+                 {activeTab === 'database' 
+                   ? 'Manage system data, seed products, and clear records.' 
+                   : `Manage your ${activeTab} and view performance.`}
+               </p>
              </div>
              
              <div className="flex items-center gap-4 bg-white p-2 rounded-full shadow-sm border border-gray-100 pr-6">
                 <div className="w-10 h-10 bg-[#B08D55] rounded-full flex items-center justify-center text-white font-serif font-bold text-lg shadow-md">
-                    {user.email[0].toUpperCase()}
+                    {user?.email ? user.email[0].toUpperCase() : 'A'}
                 </div>
                 <div className="flex flex-col">
                     <span className="text-xs font-bold text-gray-900">Administrator</span>
-                    <span className="text-[10px] text-gray-500">{user.email}</span>
+                    <span className="text-[10px] text-gray-500">{user?.email}</span>
                 </div>
              </div>
           </header>
