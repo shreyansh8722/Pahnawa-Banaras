@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const ProductManager = ({ notify }) => { 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [categories, setCategories] = useState([]); // Dynamic Categories
+  const [categories, setCategories] = useState([]); 
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -27,13 +27,27 @@ export const ProductManager = ({ notify }) => {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
 
+  // --- UPDATED INITIAL STATE WITH NEW FIELDS ---
   const initialState = {
     name: '',
+    sku: '', // New
     price: '',
     comparePrice: '',
-    category: '', // Start empty to force selection
+    category: '', 
     description: '',
     stock: '',
+    
+    // New Luxury Specs
+    technique: '', 
+    fabric: '', 
+    warpMaterial: '',
+    weftMaterial: '',
+    zariType: '',
+    origin: 'Varanasi, India',
+    weight: '',
+    dimensions: '',
+    care: 'Dry Clean Only',
+
     images: [],      
     existingImages: [] 
   };
@@ -44,7 +58,6 @@ export const ProductManager = ({ notify }) => {
   useEffect(() => {
     setLoading(true);
     
-    // Products Listener
     const qProd = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     const unsubProd = onSnapshot(qProd, (snapshot) => {
       const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -56,7 +69,6 @@ export const ProductManager = ({ notify }) => {
       notify("Failed to load products", "error");
     });
 
-    // Categories Fetch
     const fetchCats = async () => {
         try {
             const qCat = query(collection(db, 'navigation'), orderBy('order', 'asc'));
@@ -80,7 +92,8 @@ export const ProductManager = ({ notify }) => {
       const lower = searchQuery.toLowerCase();
       setFilteredProducts(products.filter(p => 
         p.name.toLowerCase().includes(lower) || 
-        (p.subCategory && p.subCategory.toLowerCase().includes(lower))
+        (p.subCategory && p.subCategory.toLowerCase().includes(lower)) ||
+        (p.sku && p.sku.toLowerCase().includes(lower))
       ));
     }
   }, [searchQuery, products]);
@@ -100,11 +113,24 @@ export const ProductManager = ({ notify }) => {
       setEditId(product.id);
       setFormData({
         name: product.name,
+        sku: product.sku || '',
         price: product.price,
         comparePrice: product.comparePrice || '',
         category: product.subCategory || product.category,
         description: product.fullDescription || '',
         stock: product.stock || 0,
+        
+        // Populate new fields
+        technique: product.technique || '',
+        fabric: product.fabric || '',
+        warpMaterial: product.warpMaterial || '',
+        weftMaterial: product.weftMaterial || '',
+        zariType: product.zariType || '',
+        origin: product.origin || 'Varanasi, India',
+        weight: product.weight || '',
+        dimensions: product.dimensions || '',
+        care: product.care || 'Dry Clean Only',
+
         images: [],
         existingImages: product.imageUrls || [product.featuredImageUrl]
       });
@@ -146,13 +172,25 @@ export const ProductManager = ({ notify }) => {
 
       const productData = {
         name: formData.name,
+        sku: formData.sku || `SKU-${Date.now().toString().slice(-6)}`, // Auto-gen if empty
         price: parseFloat(formData.price),
         comparePrice: parseFloat(formData.comparePrice) || 0,
         stock: parseInt(formData.stock) || 0,
-        category: 'artifact', // Internal grouping
-        subCategory: formData.category, // Actual Display Category
+        category: 'artifact', 
+        subCategory: formData.category,
         tags_lowercase: [formData.category.toLowerCase(), formData.name.toLowerCase()],
-        material: 'Pure Silk',
+        
+        // New Specs
+        technique: formData.technique,
+        fabric: formData.fabric,
+        warpMaterial: formData.warpMaterial,
+        weftMaterial: formData.weftMaterial,
+        zariType: formData.zariType,
+        origin: formData.origin,
+        weight: formData.weight,
+        dimensions: formData.dimensions,
+        care: formData.care,
+
         featuredImageUrl: finalImages[0], 
         imageUrls: finalImages,
         fullDescription: formData.description,
@@ -198,7 +236,7 @@ export const ProductManager = ({ notify }) => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
                     type="text" 
-                    placeholder="Search by name or category..." 
+                    placeholder="Search by name, SKU or category..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B08D55] focus:ring-1 focus:ring-[#B08D55] transition-all bg-gray-50 focus:bg-white"
@@ -238,10 +276,7 @@ export const ProductManager = ({ notify }) => {
                                         </div>
                                         <div>
                                             <p className="font-bold text-gray-900 line-clamp-1">{p.name}</p>
-                                            <p className="text-xs text-gray-400 sm:hidden">{p.subCategory}</p>
-                                            {p.comparePrice > p.price && (
-                                              <span className="text-[10px] text-green-600 font-medium">{Math.round(((p.comparePrice-p.price)/p.comparePrice)*100)}% OFF</span>
-                                            )}
+                                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">SKU: {p.sku || '-'}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -295,8 +330,8 @@ export const ProductManager = ({ notify }) => {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
-                <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/50">
+                <form id="product-form" onSubmit={handleSubmit} className="space-y-8">
                   
                   {/* Image Upload */}
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -326,32 +361,38 @@ export const ProductManager = ({ notify }) => {
                     </div>
                   </div>
 
-                  {/* Details */}
+                  {/* Basic Details */}
                   <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">Product Name</label>
-                        <input required name="name" className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Royal Red Banarasi" />
+                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-widest border-b pb-2">Basic Info</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Product Name</label>
+                            <input required name="name" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Royal Red Banarasi" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">SKU</label>
+                            <input name="sku" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} placeholder="Auto" />
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">Price (₹)</label>
-                            <input required name="price" type="number" className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Price (₹)</label>
+                            <input required name="price" type="number" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">MRP (Optional)</label>
-                            <input name="comparePrice" type="number" className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.comparePrice} onChange={e => setFormData({...formData, comparePrice: e.target.value})} />
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">MRP (Optional)</label>
+                            <input name="comparePrice" type="number" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.comparePrice} onChange={e => setFormData({...formData, comparePrice: e.target.value})} />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Category</label>
                         <div className="relative">
-                            {/* DYNAMIC CATEGORY DROPDOWN */}
                             <select 
                                 name="category" 
-                                className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm appearance-none bg-white focus:border-[#B08D55] outline-none" 
+                                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm appearance-none bg-white focus:border-[#B08D55] outline-none" 
                                 value={formData.category} 
                                 onChange={e => setFormData({...formData, category: e.target.value})}
                             >
@@ -371,15 +412,55 @@ export const ProductManager = ({ notify }) => {
                         </div>
                       </div>
                       <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">Stock Quantity</label>
-                          <input required name="stock" type="number" className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} />
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Stock</label>
+                          <input required name="stock" type="number" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} />
                       </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Description</label>
-                      <textarea name="description" className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:border-[#B08D55] outline-none bg-white min-h-[120px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Detailed description of the weave, fabric, and care instructions..." />
+                  {/* NEW: PRODUCT SPECIFICATIONS SECTION */}
+                  <div className="bg-gray-100/50 p-4 rounded-xl border border-gray-200 space-y-4">
+                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-widest border-b border-gray-200 pb-2">Product Specifications</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Technique</label>
+                            <input name="technique" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.technique} onChange={e => setFormData({...formData, technique: e.target.value})} placeholder="e.g. Kadhua Handloom" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Fabric Base</label>
+                            <input name="fabric" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.fabric} onChange={e => setFormData({...formData, fabric: e.target.value})} placeholder="e.g. Katan Silk" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Warp Material</label>
+                            <input name="warpMaterial" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.warpMaterial} onChange={e => setFormData({...formData, warpMaterial: e.target.value})} placeholder="e.g. Pure Silk" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Weft Material</label>
+                            <input name="weftMaterial" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.weftMaterial} onChange={e => setFormData({...formData, weftMaterial: e.target.value})} placeholder="e.g. Pure Silk" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Zari Type</label>
+                            <input name="zariType" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.zariType} onChange={e => setFormData({...formData, zariType: e.target.value})} placeholder="e.g. Gold Zari" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Origin</label>
+                            <input name="origin" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.origin} onChange={e => setFormData({...formData, origin: e.target.value})} />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Weight</label>
+                            <input name="weight" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} placeholder="e.g. 750 gms" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Dimensions</label>
+                            <input name="dimensions" className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:border-[#B08D55] outline-none bg-white" value={formData.dimensions} onChange={e => setFormData({...formData, dimensions: e.target.value})} placeholder="e.g. 6.5 meters" />
+                        </div>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Full Description</label>
+                    <textarea name="description" className="w-full border border-gray-300 px-4 py-3 rounded-lg text-sm focus:border-[#B08D55] outline-none bg-white min-h-[120px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Detailed description of the weave, fabric, and care instructions..." />
                   </div>
                 </form>
               </div>

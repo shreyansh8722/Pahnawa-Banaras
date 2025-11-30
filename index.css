@@ -1,52 +1,81 @@
-/* src/index.css */
-@import "tailwindcss";
+/* --- 1. FONTS: The Voice of Luxury --- */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Lato:wght@300;400;700&display=swap');
+
+@import "tailwindcss"; 
 
 @theme {
-  /* --- LUXURY PALETTE --- */
-  --color-heritage-paper: #FDFBF7;     /* Warm, rich off-white (Not sterile white) */
-  --color-heritage-sand: #F5F2EB;      /* Subtle beige for section breaks */
-  --color-heritage-charcoal: #1A1A1A;  /* Softer than pure black */
-  --color-heritage-gold: #9D8461;      /* Muted antique gold (Avoid bright yellow) */
-  --color-heritage-border: #E5E0D8;
-
-  /* MAPPING EXISTING VARIABLES TO NEW PALETTE */
-  --color-brand-primary: var(--color-heritage-gold);
-  --color-brand-dark: var(--color-heritage-charcoal);
+  /* --- PREMIUM MONOCHROME PALETTE --- */
   
-  /* --- TYPOGRAPHY RULES --- */
-  --font-serif: "Cormorant Garamond", serif;
-  --font-sans: "Lato", sans-serif;
+  /* Backgrounds */
+  --color-heritage-paper: #ffffff;    /* Pure White - The canvas */
+  --color-heritage-sand: #f8f8f8;     /* Very subtle light gray for separation */
+  --color-heritage-overlay: rgba(0, 0, 0, 0.03);
 
-  /* WIDE TRACKING IS KEY TO LUXURY */
-  --tracking-lux: 0.25em;     /* For "OVERLINES" */
-  --tracking-title: -0.02em;  /* For "Headings" (tighter looks elegant) */
+  /* Typography & Lines */
+  --color-heritage-charcoal: #050505; /* Rich Black */
+  --color-heritage-grey: #555555;     /* Neutral Dark Gray */
+  --color-heritage-border: #e5e5e5;   /* Crisp, light dividers */
+  
+  /* Accents - Minimal usage only */
+  --color-heritage-gold: #8c8c8c;     /* Changed to Metallic Grey/Bronze - Gold feels too "festive" for modern luxury */
+  --color-heritage-clay: #1a1a1a;     /* Replaced with Black */
+
+  /* MAPPINGS */
+  --color-brand-primary: var(--color-heritage-charcoal);
+  --color-brand-primaryDark: #000000;
+  --color-brand-dark: var(--color-heritage-charcoal);
+  --color-brand-paper: var(--color-heritage-paper);
+  --color-brand-gray: var(--color-heritage-sand);
+
+  /* --- TYPOGRAPHY --- */
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Lato", ui-sans-serif, system-ui, sans-serif;
+  
+  /* --- SPACING --- */
+  --tracking-lux: 0.15em;      
+  --tracking-widest: 0.2em; 
+
+  /* --- ANIMATIONS --- */
+  --animate-fade-in: fadeIn 0.8s ease-out forwards;
+  --animate-slide-up: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 @layer base {
+  html { scroll-behavior: smooth; }
+  
   body {
     background-color: var(--color-heritage-paper);
     color: var(--color-heritage-charcoal);
-    font-family: var(--font-serif); /* Default to Serif for elegance */
-    font-weight: 400;
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
-  /* Heading System */
-  h1, h2, h3, h4 {
-    font-weight: 300; /* Light weight = Premium */
-    letter-spacing: var(--tracking-title);
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 300; 
+    letter-spacing: -0.02em;
+    color: var(--color-heritage-charcoal);
   }
-
-  /* Body Text */
-  p, input, select, button, span {
-    font-family: var(--font-sans);
-  }
-
-  /* The "Caption" style (e.g. "NEW ARRIVAL") */
-  .text-overline {
-    font-family: var(--font-sans);
+  
+  button {
+    letter-spacing: var(--tracking-widest);
     text-transform: uppercase;
-    letter-spacing: var(--tracking-lux);
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-weight: 500;
+    font-size: 0.7rem;
   }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }

@@ -1,61 +1,61 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '@/lib/utils';
+import { LazyImage } from '@/components/LazyImage';
+import { useCart } from '@/context/CartContext';
+import { Plus } from 'lucide-react';
 
 export const ProductCard = ({ item }) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Safety check
-  if (!item) return null;
-
-  // Image Logic: Prefer the second image for hover if available, otherwise just zoom the first
-  const mainImage = item.featuredImageUrl || item.imageUrls?.[0] || 'https://placehold.co/400x600?text=Pahnawa';
-  const hoverImage = item.imageUrls?.[1] || mainImage; // Fallback to main if no second image
+  const handleAddToCart = (e) => {
+    e.stopPropagation();
+    addToCart({ ...item, quantity: 1 });
+  };
 
   return (
     <div 
+      className="group cursor-pointer flex flex-col space-y-4"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={() => navigate(`/product/${item.id}`)}
-      className="group cursor-pointer flex flex-col gap-2 relative"
     >
-      {/* 1. Image Container - STRICT PORTRAIT ASPECT RATIO (3:4) */}
-      <div className="relative w-full aspect-[3/4] overflow-hidden bg-[#F5F2EB]">
+      {/* IMAGE CONTAINER - Aspect Ratio 3:4 for that "Fashion Editorial" look */}
+      <div className="relative w-full aspect-[3/4] overflow-hidden bg-heritage-sand/20">
         
-        {/* Hover Image (Bottom Layer) */}
-        <img 
-          src={hoverImage} 
-          alt={item.name} 
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          loading="lazy"
-        />
+        {/* Primary Image */}
+        <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
+           <LazyImage src={item.featuredImageUrl} alt={item.name} className="w-full h-full object-cover" />
+        </div>
+        
+        {/* Secondary (Hover) Image - Slow zoom effect */}
+        <div className={`absolute inset-0 transition-all duration-1000 ease-out ${isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}>
+           <LazyImage src={item.imageUrls?.[1] || item.featuredImageUrl} alt={item.name} className="w-full h-full object-cover" />
+        </div>
 
-        {/* Main Image (Top Layer) - Fades out on hover */}
-        {/* Using a faster duration (200ms) for a snappier swap effect */}
-        <img 
-          src={mainImage} 
-          alt={item.name} 
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ease-linear z-10 ${hoverImage !== mainImage ? 'group-hover:opacity-0' : ''}`}
-          loading="lazy"
-        />
-
-        {/* Sold Out Badge - Minimalist */}
-        {item.stock === 0 && (
-          <div className="absolute top-2 left-2 bg-heritage-charcoal text-white text-[8px] uppercase tracking-widest px-2 py-1 z-20">
-            Sold Out
-          </div>
-        )}
+        {/* 'QUICK ADD' SLIDE-UP BAR */}
+        <div 
+          onClick={handleAddToCart}
+          className={`absolute bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm py-3 px-5 flex justify-between items-center transition-transform duration-500 border-t border-heritage-border/50 ${isHovered ? 'translate-y-0' : 'translate-y-full'}`}
+        >
+           <span className="text-[10px] uppercase tracking-widest text-heritage-charcoal font-medium hover:text-heritage-gold transition-colors">
+             Quick Add
+           </span>
+           <Plus size={14} className="text-heritage-charcoal" strokeWidth={1} />
+        </div>
       </div>
 
-      {/* 2. Minimalist Details - Refined Typography */}
-      <div className="text-center mt-1 px-1">
-        {/* Product Name: Smaller, Serif, Dark Grey */}
-        <h3 className="font-serif text-sm md:text-[15px] text-heritage-charcoal/90 group-hover:text-heritage-gold transition-colors duration-300 line-clamp-1 leading-tight">
+      {/* MINIMAL METADATA - Centered for elegance */}
+      <div className="text-center space-y-1">
+        <h3 className="font-serif text-lg text-heritage-charcoal font-light group-hover:text-heritage-gold transition-colors duration-500">
           {item.name}
         </h3>
         
-        {/* Price: Bold, Black, slightly smaller than name */}
-        <p className="font-sans text-xs md:text-sm font-bold text-black mt-1">
-          {formatPrice(item.price)}
-        </p>
+        <div className="text-[10px] text-heritage-grey uppercase tracking-widest">
+           {item.subCategory} <span className="mx-1">•</span> ₹{formatPrice(item.price)}
+        </div>
       </div>
     </div>
   );

@@ -1,48 +1,81 @@
-import React, { useState } from 'react';
-import { Truck } from 'lucide-react';
+import React from 'react';
+import { X } from 'lucide-react';
 
-const DeliveryChecker = () => {
-  const [pincode, setPincode] = useState('');
-  const [status, setStatus] = useState(null);
+export const SizeChartModal = ({ isOpen, onClose, category }) => {
+  if (!isOpen) return null;
 
-  const checkDelivery = () => {
-    if (pincode.length === 6) {
-      setStatus('available');
-    } else {
-      setStatus('invalid');
+  // Define charts based on category (You can expand this)
+  const chartType = category?.toLowerCase().includes('blouse') ? 'blouse' : 'suit';
+
+  const data = {
+    blouse: {
+      headers: ['Size', 'Bust (in)', 'Waist (in)', 'Shoulder (in)', 'Length (in)'],
+      rows: [
+        ['XS', '32', '26', '13.5', '14'],
+        ['S', '34', '28', '14', '14.5'],
+        ['M', '36', '30', '14.5', '15'],
+        ['L', '38', '32', '15', '15.5'],
+        ['XL', '40', '34', '15.5', '16'],
+      ]
+    },
+    suit: {
+      headers: ['Size', 'Bust (in)', 'Waist (in)', 'Hip (in)', 'Kurta Length'],
+      rows: [
+        ['XS', '34', '30', '36', '45'],
+        ['S', '36', '32', '38', '45'],
+        ['M', '38', '34', '40', '46'],
+        ['L', '40', '36', '42', '46'],
+        ['XL', '42', '38', '44', '47'],
+      ]
     }
   };
 
+  const chart = data[chartType] || data.suit;
+
   return (
-    <div className="py-6 border-t border-gray-100">
-       <h4 className="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
-         <Truck size={14} /> Delivery Options
-       </h4>
-       <div className="flex gap-2 mb-2">
-         <input 
-            type="text" 
-            placeholder="Enter Pincode"
-            value={pincode}
-            onChange={(e) => setPincode(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm w-48 focus:outline-none focus:border-[#B08D55]"
-            maxLength={6}
-         />
-         <button 
-            onClick={checkDelivery}
-            className="text-[#B08D55] font-bold text-sm px-2 hover:underline"
-         >
-            Check
-         </button>
-       </div>
-       
-       {status === 'available' && (
-         <p className="text-xs text-green-600 font-medium">Delivery available by {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toDateString()}</p>
-       )}
-       {status === 'invalid' && (
-         <p className="text-xs text-red-500">Please enter a valid 6-digit pincode.</p>
-       )}
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white w-full max-w-2xl relative shadow-2xl animate-slide-up">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <X size={20} className="text-gray-500" />
+        </button>
+
+        <div className="p-8 md:p-12">
+          <h3 className="font-serif text-2xl italic text-gray-900 mb-2">Size Guide</h3>
+          <p className="text-xs uppercase tracking-widest text-gray-500 mb-8">
+            Standard Sizing for {category || 'Garments'}
+          </p>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50 text-gray-700 uppercase text-xs tracking-wider">
+                <tr>
+                  {chart.headers.map((h, i) => (
+                    <th key={i} className="px-6 py-4 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {chart.rows.map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                    {row.map((cell, j) => (
+                      <td key={j} className={`px-6 py-4 text-gray-600 ${j === 0 ? 'font-bold text-gray-900' : ''}`}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 p-4 bg-gray-50 border border-gray-100 text-xs text-gray-500 leading-relaxed">
+            * All measurements are in inches. Garment measurements may vary slightly due to the handmade nature of the product. For custom fitting, please contact our stylists.
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
-
-export default DeliveryChecker;
