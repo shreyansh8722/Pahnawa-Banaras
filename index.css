@@ -1,0 +1,52 @@
+/* src/index.css */
+@import "tailwindcss";
+
+@theme {
+  /* --- LUXURY PALETTE --- */
+  --color-heritage-paper: #FDFBF7;     /* Warm, rich off-white (Not sterile white) */
+  --color-heritage-sand: #F5F2EB;      /* Subtle beige for section breaks */
+  --color-heritage-charcoal: #1A1A1A;  /* Softer than pure black */
+  --color-heritage-gold: #9D8461;      /* Muted antique gold (Avoid bright yellow) */
+  --color-heritage-border: #E5E0D8;
+
+  /* MAPPING EXISTING VARIABLES TO NEW PALETTE */
+  --color-brand-primary: var(--color-heritage-gold);
+  --color-brand-dark: var(--color-heritage-charcoal);
+  
+  /* --- TYPOGRAPHY RULES --- */
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Lato", sans-serif;
+
+  /* WIDE TRACKING IS KEY TO LUXURY */
+  --tracking-lux: 0.25em;     /* For "OVERLINES" */
+  --tracking-title: -0.02em;  /* For "Headings" (tighter looks elegant) */
+}
+
+@layer base {
+  body {
+    background-color: var(--color-heritage-paper);
+    color: var(--color-heritage-charcoal);
+    font-family: var(--font-serif); /* Default to Serif for elegance */
+    font-weight: 400;
+  }
+
+  /* Heading System */
+  h1, h2, h3, h4 {
+    font-weight: 300; /* Light weight = Premium */
+    letter-spacing: var(--tracking-title);
+  }
+
+  /* Body Text */
+  p, input, select, button, span {
+    font-family: var(--font-sans);
+  }
+
+  /* The "Caption" style (e.g. "NEW ARRIVAL") */
+  .text-overline {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-lux);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+}
