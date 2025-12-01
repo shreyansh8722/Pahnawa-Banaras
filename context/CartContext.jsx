@@ -1,181 +1,97 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
 export const useCart = () => {
-  return useContext(CartContext);
+  const context = useContext(CartContext);
+  if (!context) throw new Error('useCart must be used within a CartProvider');
+  return context;
 };
 
 export const CartProvider = ({ children }) => {
-  // --- STATE ---
+  // Load from localStorage initially
   const [cart, setCart] = useState(() => {
     try {
-      const localCart = localStorage.getItem('pahnawa_cart');
-      return localCart ? JSON.parse(localCart) : [];
-    } catch {
+      const savedCart = localStorage.getItem('cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (error) {
+      console.error("Failed to load cart:", error);
       return [];
     }
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState(null);
-  const [promoError, setPromoError] = useState('');
-  const [availableCoupons, setAvailableCoupons] = useState([]);
 
-  // --- INIT ---
+  // Save to localStorage whenever cart changes
   useEffect(() => {
-    const fetchCoupons = async () => {
-      try {
-        const q = query(collection(db, 'coupons'), where('isActive', '==', true));
-        const snap = await getDocs(q);
-        setAvailableCoupons(snap.docs.map(doc => doc.data()));
-      } catch (err) {
-        console.error("Failed to load coupons", err);
-      }
-    };
-    fetchCoupons();
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('pahnawa_cart', JSON.stringify(cart));
+    localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
-  // --- CALCULATIONS ---
-  const subtotal = useMemo(() => {
-    return cart.reduce((total, item) => total + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0);
-  }, [cart]);
-
-  const cartCount = cart.reduce((count, item) => count + (Number(item.quantity) || 1), 0);
-
-  const discount = useMemo(() => {
-    if (!appliedPromo || subtotal < appliedPromo.minOrder) return 0;
-    return appliedPromo.type === 'fixed' 
-      ? appliedPromo.value 
-      : Math.round((subtotal * appliedPromo.value) / 100);
-  }, [subtotal, appliedPromo]);
-
-  const cartTotal = Math.max(0, subtotal - discount);
-
-  // --- CORE ACTIONS ---
-
+  // --- 1. ADD TO CART (With Unique ID Generation) ---
   const addToCart = (product) => {
-    if (!product || !product.id) return;
-
-    // 1. Force ID to string to prevent mismatch (e.g. 123 vs "123")
-    const productId = String(product.id);
-
-    // 2. Strict Option Normalization
-    // Whether coming from Home (no options) or Product Page (options object),
-    // we rebuild it exactly the same way every time.
-    const incomingOptions = product.selectedOptions || {};
-    const normalizedOptions = {
-        fallPico: Boolean(incomingOptions.fallPico),
-        blouseStitching: Boolean(incomingOptions.blouseStitching)
-    };
-
-    // 3. Generate Deterministic Key
-    // JSON.stringify order is usually consistent, but sorting keys makes it 100% safe.
-    const optionsString = JSON.stringify(normalizedOptions, Object.keys(normalizedOptions).sort());
-    const uniqueCartItemId = `${productId}-${optionsString}`;
-
-    setCart(prev => {
-      // Check if this EXACT variation exists
-      const existingItemIndex = prev.findIndex(item => item.cartItemId === uniqueCartItemId);
+    setCart((prevCart) => {
+      // Create a unique key based on ID + Options to find duplicates
+      const optionsKey = JSON.stringify(product.selectedOptions || {});
+      const existingItemIndex = prevCart.findIndex(
+        (item) => item.id === product.id && JSON.stringify(item.selectedOptions || {}) === optionsKey
+      );
 
       if (existingItemIndex > -1) {
-        // MERGE: Update quantity of existing item
-        const newCart = [...prev];
-        const existingItem = newCart[existingItemIndex];
-        
-        newCart[existingItemIndex] = {
-          ...existingItem,
-          quantity: existingItem.quantity + (product.quantity || 1),
-          // Update price only if options didn't change but base price did (rare edge case)
-          price: Number(product.price) || existingItem.price 
-        };
+        // Item exists with same options -> Increment Quantity
+        const newCart = [...prevCart];
+        newCart[existingItemIndex].quantity += (product.quantity || 1);
         return newCart;
+      } else {
+        // New Item -> Add unique internal ID (_cartId) for reliable updates
+        return [...prevCart, { 
+            ...product, 
+            quantity: product.quantity || 1,
+            _cartId: Date.now() + Math.random().toString(36).substr(2, 9) 
+        }];
       }
-
-      // ADD: New item
-      return [...prev, {
-        ...product,
-        id: productId, // Ensure ID is string
-        selectedOptions: normalizedOptions, // Store the clean options
-        cartItemId: uniqueCartItemId, // Store the key
-        price: Number(product.price) || 0,
-        quantity: Number(product.quantity) || 1
-      }];
     });
-
-    setIsCartOpen(true);
-    setPromoError('');
+    setIsCartOpen(true); // Open cart when item added
   };
 
-  const removeFromCart = (cartItemId) => {
-    setCart(prev => prev.filter(p => p.cartItemId !== cartItemId));
+  // --- 2. REMOVE FROM CART ---
+  const removeFromCart = (cartId) => {
+    setCart((prevCart) => prevCart.filter((item) => (item._cartId || item.id) !== cartId));
   };
 
-  const updateQuantity = (cartItemId, delta) => {
-    setCart(prev => prev.map(p => {
-      if (p.cartItemId === cartItemId) {
-        return { ...p, quantity: Math.max(1, p.quantity + delta) };
-      }
-      return p;
-    }));
-  };
-
-  const clearCart = () => {
-    setCart([]);
-    setAppliedPromo(null);
-    setPromoError('');
-  };
-
-  // --- PROMO LOGIC ---
-  const applyPromoCode = async (code) => {
-    setPromoError('');
-    const upperCode = code.toUpperCase().trim();
+  // --- 3. UPDATE QUANTITY (Fixed Logic) ---
+  const updateQuantity = (cartId, newQuantity) => {
+    if (newQuantity < 1) return;
     
-    // Check loaded coupons first
-    let coupon = availableCoupons.find(c => c.code === upperCode);
-
-    // If not found, check DB (fallback)
-    if (!coupon) {
-      try {
-        const q = query(collection(db, 'coupons'), where('code', '==', upperCode), where('isActive', '==', true));
-        const snap = await getDocs(q);
-        if (!snap.empty) coupon = snap.docs[0].data();
-      } catch (err) { console.error(err); }
-    }
-
-    if (!coupon) {
-      setPromoError('Invalid coupon code.');
-      return false;
-    }
-    if (subtotal < coupon.minOrder) {
-      setPromoError(`Add items worth ₹${coupon.minOrder - subtotal} more to use this code.`);
-      return false;
-    }
-
-    setAppliedPromo(coupon);
-    return true;
+    setCart((prevCart) => 
+      prevCart.map((item) => 
+        // Match by _cartId if available, fallback to id (for old items)
+        (item._cartId === cartId || (!item._cartId && item.id === cartId))
+          ? { ...item, quantity: newQuantity } 
+          : item
+      )
+    );
   };
 
-  const removePromoCode = () => {
-    setAppliedPromo(null);
-    setPromoError('');
-  };
-  
+  const clearCart = () => setCart([]);
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
+  // Calculate Totals
+  const cartTotal = cart.reduce((total, item) => total + (Number(item.price) * item.quantity), 0);
+  const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
+
   return (
     <CartContext.Provider value={{
-      cart, subtotal, discount, cartTotal, cartCount, isCartOpen,
-      addToCart, removeFromCart, updateQuantity, clearCart,
-      openCart, closeCart, availableCoupons, appliedPromo,
-      promoError, applyPromoCode, removePromoCode
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      cartTotal,
+      cartCount,
+      isCartOpen,
+      openCart,
+      closeCart
     }}>
       {children}
     </CartContext.Provider>

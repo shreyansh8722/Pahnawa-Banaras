@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { useCart } from '@/context/CartContext';
+import { useFavorites } from '@/hooks/useFavorites';
 import { formatPrice } from '@/lib/utils';
 import { AppSkeleton } from '@/components/skeletons/AppSkeleton';
 import toast from 'react-hot-toast';
@@ -128,6 +129,7 @@ const Accordion = ({ title, children, isOpen, onClick }) => (
 export default function ProductDetailsPage() {
   const { productId } = useParams();
   const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const navigate = useNavigate();
   
   const [product, setProduct] = useState(null);
@@ -135,7 +137,6 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('care'); 
   const [pincode, setPincode] = useState('');
-  const [isWishlisted, setIsWishlisted] = useState(false);
   
   const [selectedAddons, setSelectedAddons] = useState({ 
     fallPico: false, 
@@ -144,6 +145,9 @@ export default function ProductDetailsPage() {
   });
   
   const [showSizeChart, setShowSizeChart] = useState(false);
+
+  // Use the hook to determine wishlisted status instead of local state
+  const isWishlisted = product ? isFavorite(product.id) : false;
 
   // FIX: Force Scroll to Top whenever Loading state changes or ProductID changes
   useLayoutEffect(() => {
@@ -220,7 +224,10 @@ export default function ProductDetailsPage() {
   };
 
   const handleWishlistToggle = () => {
-    setIsWishlisted(!isWishlisted);
+    // UPDATED LOGIC: Use the global hook to save to DB
+    toggleFavorite(product.id);
+    
+    // Maintain your original toast behavior for adding items
     if (!isWishlisted) {
       toast.custom((t) => <WishlistToast product={product} visible={t.visible} />, {
         position: 'bottom-left',
