@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, setDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './useAuth';
 import { useLoginModal } from '@/context/LoginModalContext';
@@ -11,7 +11,7 @@ export function useFavorites() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. REAL-TIME LISTENER (The Source of Truth)
+  // 1. REAL-TIME LISTENER
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -21,14 +21,15 @@ export function useFavorites() {
 
     const userRef = doc(db, 'users', user.uid);
     
+    // Listen to user document for favorites changes
     const unsubscribe = onSnapshot(userRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        // Force strings to ensure perfect matching
         const safeFavs = (data.favorites || []).map(id => String(id));
         setFavorites(safeFavs);
       } else {
-        // Doc doesn't exist yet (new user) -> Empty favorites
+        // Automatically create user doc if missing
+        setDoc(userRef, { favorites: [], email: user.email }, { merge: true });
         setFavorites([]);
       }
       setLoading(false);
@@ -47,24 +48,29 @@ export function useFavorites() {
       return;
     }
 
-    const idString = String(productId); // Ensure String ID
+    if (!productId) {
+      console.error("No product ID provided to toggleFavorite");
+      return;
+    }
+
+    const idString = String(productId);
     const userRef = doc(db, 'users', user.uid);
     const isAlreadyFavorite = favorites.includes(idString);
 
     try {
+      // Optimistic UI could go here, but Firestore is usually fast enough.
       if (isAlreadyFavorite) {
-        // REMOVE
         await updateDoc(userRef, { favorites: arrayRemove(idString) });
         toast.success("Removed from Wishlist", { 
-          icon: '💔', 
-          style: { background: '#fff', color: '#1a1a1a', border: '1px solid #eee' } 
+          style: { background: '#333', color: '#fff', borderRadius: '0px' },
+          icon: '💔'
         });
       } else {
-        // ADD (Use setDoc merge to create user doc if missing)
+        // Use setDoc with merge to ensure it works even if doc is missing
         await setDoc(userRef, { favorites: arrayUnion(idString) }, { merge: true });
-        toast.success("Saved to Wishlist", { 
-          icon: '❤️', 
-          style: { background: '#fff', color: '#1a1a1a', border: '1px solid #eee' } 
+        toast.success("Added to Wishlist", { 
+          style: { background: '#333', color: '#fff', borderRadius: '0px' },
+          icon: '❤️'
         });
       }
     } catch (err) {
@@ -73,7 +79,6 @@ export function useFavorites() {
     }
   };
 
-  // Helper
   const isFavorite = (id) => favorites.includes(String(id));
 
   return { favorites, isFavorite, toggleFavorite, loading };
