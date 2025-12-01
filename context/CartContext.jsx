@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useLoginModal } from '@/context/LoginModalContext';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -11,9 +9,7 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const { user } = useAuth();
-  const { openLoginModal } = useLoginModal();
-  
+  // --- STATE ---
   const [cart, setCart] = useState(() => {
     try {
       const localCart = localStorage.getItem('pahnawa_cart');
@@ -28,6 +24,7 @@ export const CartProvider = ({ children }) => {
   const [promoError, setPromoError] = useState('');
   const [availableCoupons, setAvailableCoupons] = useState([]);
 
+  // --- INIT ---
   useEffect(() => {
     const fetchCoupons = async () => {
       try {
@@ -45,18 +42,12 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('pahnawa_cart', JSON.stringify(cart));
   }, [cart]);
 
+  // --- CALCULATIONS ---
   const subtotal = useMemo(() => {
     return cart.reduce((total, item) => total + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0);
   }, [cart]);
 
   const cartCount = cart.reduce((count, item) => count + (Number(item.quantity) || 1), 0);
-
-  useEffect(() => {
-    if (appliedPromo && subtotal < appliedPromo.minOrder) {
-      setAppliedPromo(null);
-      setPromoError(`Order value must be at least ₹${appliedPromo.minOrder} for this code.`);
-    }
-  }, [subtotal, appliedPromo]);
 
   const discount = useMemo(() => {
     if (!appliedPromo || subtotal < appliedPromo.minOrder) return 0;
@@ -67,55 +58,57 @@ export const CartProvider = ({ children }) => {
 
   const cartTotal = Math.max(0, subtotal - discount);
 
-  // --- ACTIONS ---
+  // --- CORE ACTIONS ---
 
   const addToCart = (product) => {
-    // Allows guest checkout. Uncomment if you want to force login:
-    // if (!user) { openLoginModal(); return; }
-
     if (!product || !product.id) return;
 
-    // 1. Normalize Options: Ensure "undefined" options look the same as "default" options
-    // This fixes the duplicate issue between Quick Add and Product Page
-    const defaultOptions = { fallPico: false, blouseStitching: false };
-    const selectedOptions = product.selectedOptions || defaultOptions;
-    
-    // Sort keys to ensure object order doesn't affect the JSON string
-    const optionsKey = JSON.stringify(
-      Object.keys(selectedOptions).sort().reduce((obj, key) => {
-        obj[key] = selectedOptions[key];
-        return obj;
-      }, {})
-    );
+    // 1. Force ID to string to prevent mismatch (e.g. 123 vs "123")
+    const productId = String(product.id);
 
-    const uniqueId = `${product.id}-${optionsKey}`;
-    const price = Number(product.price) || 0;
-    const quantity = Number(product.quantity) || 1;
+    // 2. Strict Option Normalization
+    // Whether coming from Home (no options) or Product Page (options object),
+    // we rebuild it exactly the same way every time.
+    const incomingOptions = product.selectedOptions || {};
+    const normalizedOptions = {
+        fallPico: Boolean(incomingOptions.fallPico),
+        blouseStitching: Boolean(incomingOptions.blouseStitching)
+    };
+
+    // 3. Generate Deterministic Key
+    // JSON.stringify order is usually consistent, but sorting keys makes it 100% safe.
+    const optionsString = JSON.stringify(normalizedOptions, Object.keys(normalizedOptions).sort());
+    const uniqueCartItemId = `${productId}-${optionsString}`;
 
     setCart(prev => {
-      const existingIndex = prev.findIndex(p => p.cartItemId === uniqueId);
+      // Check if this EXACT variation exists
+      const existingItemIndex = prev.findIndex(item => item.cartItemId === uniqueCartItemId);
 
-      if (existingIndex > -1) {
-        // Item exists: Increment quantity
+      if (existingItemIndex > -1) {
+        // MERGE: Update quantity of existing item
         const newCart = [...prev];
-        newCart[existingIndex] = {
-            ...newCart[existingIndex],
-            quantity: newCart[existingIndex].quantity + quantity,
-            price: price // Update price in case it changed
+        const existingItem = newCart[existingItemIndex];
+        
+        newCart[existingItemIndex] = {
+          ...existingItem,
+          quantity: existingItem.quantity + (product.quantity || 1),
+          // Update price only if options didn't change but base price did (rare edge case)
+          price: Number(product.price) || existingItem.price 
         };
         return newCart;
       }
-      
-      // Item new: Add to cart
-      return [...prev, { 
-        ...product, 
-        selectedOptions, // Ensure options are saved
-        cartItemId: uniqueId,
-        price: price,
-        quantity: quantity
+
+      // ADD: New item
+      return [...prev, {
+        ...product,
+        id: productId, // Ensure ID is string
+        selectedOptions: normalizedOptions, // Store the clean options
+        cartItemId: uniqueCartItemId, // Store the key
+        price: Number(product.price) || 0,
+        quantity: Number(product.quantity) || 1
       }];
     });
-    
+
     setIsCartOpen(true);
     setPromoError('');
   };
@@ -139,11 +132,15 @@ export const CartProvider = ({ children }) => {
     setPromoError('');
   };
 
+  // --- PROMO LOGIC ---
   const applyPromoCode = async (code) => {
     setPromoError('');
     const upperCode = code.toUpperCase().trim();
+    
+    // Check loaded coupons first
     let coupon = availableCoupons.find(c => c.code === upperCode);
 
+    // If not found, check DB (fallback)
     if (!coupon) {
       try {
         const q = query(collection(db, 'coupons'), where('code', '==', upperCode), where('isActive', '==', true));

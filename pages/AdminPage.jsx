@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingBag, Package, Users, 
   Settings, LogOut, Menu, X, Shield, MessageSquare, 
   Ticket, LayoutTemplate, Globe, CheckCircle, AlertCircle,
-  Database
+  Database, Image as ImageIcon // Added ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,6 +21,7 @@ import { SettingsManager } from '../components/admin/SettingsManager';
 import { SubscriberManager } from '../components/admin/SubscriberManager';
 import { ContentManager } from '../components/admin/ContentManager'; 
 import { SeedData } from '../components/admin/SeedData'; 
+import { AssetManager } from '../components/admin/AssetManager'; // Added AssetManager
 
 const ADMIN_EMAIL = "shreyanshtripathi71@gmail.com"; 
 
@@ -98,11 +99,12 @@ export default function AdminPage() {
       case 'inventory': return <InventoryManager {...props} />;
       case 'coupons': return <CouponManager {...props} />;
       case 'storefront': return <StorefrontManager {...props} />;
+      case 'assets': return <AssetManager {...props} />; // Added Case
       case 'settings': return <SettingsManager {...props} />;
       case 'subscribers': return <SubscriberManager {...props} />;
       case 'messages': return <MessageInbox {...props} />;
       case 'content': return <ContentManager {...props} />;
-      case 'database': return <SeedData {...props} />; // New Database Tab
+      case 'database': return <SeedData {...props} />;
       default: return <AdminDashboard {...props} />;
     }
   };
@@ -152,8 +154,9 @@ export default function AdminPage() {
           <NavItem id="subscribers" icon={Users} label="Subscribers" isActive={activeTab === 'subscribers'} onClick={handleNavClick} />
           
           <p className="px-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3 mt-8">Configuration</p>
-          <NavItem id="content" icon={Menu} label="Menu" isActive={activeTab === 'content'} onClick={handleNavClick} />
-          <NavItem id="storefront" icon={LayoutTemplate} label="Storefront" isActive={activeTab === 'storefront'} onClick={handleNavClick} />
+          <NavItem id="content" icon={Menu} label="Menu Content" isActive={activeTab === 'content'} onClick={handleNavClick} />
+          <NavItem id="storefront" icon={LayoutTemplate} label="Hero Slider" isActive={activeTab === 'storefront'} onClick={handleNavClick} />
+          <NavItem id="assets" icon={ImageIcon} label="Global Assets" isActive={activeTab === 'assets'} onClick={handleNavClick} /> {/* Added Button */}
           <NavItem id="settings" icon={Globe} label="Settings" isActive={activeTab === 'settings'} onClick={handleNavClick} />
           
           {/* New System Section */}
@@ -175,12 +178,14 @@ export default function AdminPage() {
           <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
              <div>
                <h2 className="text-3xl font-bold text-gray-900 capitalize font-serif tracking-tight">
-                   {activeTab === 'database' ? 'Database Tools' : activeTab}
+                   {activeTab === 'assets' ? 'Global Asset Manager' : (activeTab === 'database' ? 'Database Tools' : activeTab)}
                </h2>
                <p className="text-sm text-gray-500 mt-1">
-                 {activeTab === 'database' 
-                   ? 'Manage system data, seed products, and clear records.' 
-                   : `Manage your ${activeTab} and view performance.`}
+                 {activeTab === 'assets'
+                   ? 'Manage static site images (banners, categories, covers) from one place.'
+                   : activeTab === 'database' 
+                     ? 'Manage system data, seed products, and clear records.' 
+                     : `Manage your ${activeTab} and view performance.`}
                </p>
              </div>
              

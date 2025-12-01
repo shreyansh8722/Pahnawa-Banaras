@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { doc, setDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './useAuth';
-import { useLoginModal } from '@/context/LoginModalContext'; // Import the trigger
+import { useLoginModal } from '@/context/LoginModalContext';
+import toast from 'react-hot-toast';
 
 export function useFavorites() {
   const { user } = useAuth();
-  const { openLoginModal } = useLoginModal(); // Hook to open modal
+  const { openLoginModal } = useLoginModal();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 1. REAL-TIME LISTENER (The Source of Truth)
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -19,43 +21,60 @@ export function useFavorites() {
 
     const userRef = doc(db, 'users', user.uid);
     
-    // Real-time listener for favorites
     const unsubscribe = onSnapshot(userRef, (docSnap) => {
       if (docSnap.exists()) {
-        setFavorites(docSnap.data().favorites || []);
+        const data = docSnap.data();
+        // Force strings to ensure perfect matching
+        const safeFavs = (data.favorites || []).map(id => String(id));
+        setFavorites(safeFavs);
       } else {
-        // Create user doc if it doesn't exist (edge case)
-        setDoc(userRef, { favorites: [] }, { merge: true });
+        // Doc doesn't exist yet (new user) -> Empty favorites
+        setFavorites([]);
       }
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching favorites:", error);
+      console.error("Wishlist Sync Error:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [user]);
 
+  // 2. TOGGLE ACTION
   const toggleFavorite = async (productId) => {
-    // 1. If no user, show the Login Modal instead of an alert
     if (!user) {
       openLoginModal(); 
       return;
     }
 
+    const idString = String(productId); // Ensure String ID
     const userRef = doc(db, 'users', user.uid);
-    const isFavorite = favorites.includes(productId);
+    const isAlreadyFavorite = favorites.includes(idString);
 
     try {
-      if (isFavorite) {
-        await updateDoc(userRef, { favorites: arrayRemove(productId) });
+      if (isAlreadyFavorite) {
+        // REMOVE
+        await updateDoc(userRef, { favorites: arrayRemove(idString) });
+        toast.success("Removed from Wishlist", { 
+          icon: '💔', 
+          style: { background: '#fff', color: '#1a1a1a', border: '1px solid #eee' } 
+        });
       } else {
-        await updateDoc(userRef, { favorites: arrayUnion(productId) });
+        // ADD (Use setDoc merge to create user doc if missing)
+        await setDoc(userRef, { favorites: arrayUnion(idString) }, { merge: true });
+        toast.success("Saved to Wishlist", { 
+          icon: '❤️', 
+          style: { background: '#fff', color: '#1a1a1a', border: '1px solid #eee' } 
+        });
       }
     } catch (err) {
-      console.error("Error updating favorites:", err);
+      console.error("Wishlist Update Failed:", err);
+      toast.error("Could not update wishlist");
     }
   };
 
-  return { favorites, toggleFavorite, loading };
+  // Helper
+  const isFavorite = (id) => favorites.includes(String(id));
+
+  return { favorites, isFavorite, toggleFavorite, loading };
 }
