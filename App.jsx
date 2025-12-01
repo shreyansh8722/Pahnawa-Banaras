@@ -14,7 +14,7 @@ import { Toaster } from 'react-hot-toast';
 // --- COMPONENTS ---
 import { WhatsAppButton } from './components/common/WhatsAppButton';
 import { NewsletterPopup } from './components/common/NewsletterPopup';
-import { CartModal } from './components/shop/CartModal'; // IMPORT THIS
+import { CartModal } from './components/shop/CartModal'; 
 import { SeedDataButton } from './components/admin/SeedData';
 
 // --- LAZY LOAD PAGES ---
@@ -61,7 +61,6 @@ function App() {
               <ProductProvider>
                 <Suspense fallback={<AppSkeleton />}>
                   <NewsletterPopup />
-                  {/* GLOBAL CART MODAL - Now accessible everywhere */}
                   <CartModal /> 
                   
                   <Routes>
@@ -77,8 +76,11 @@ function App() {
                     <Route path="/privacy" element={<PrivacyPolicy />} />
                     <Route path="/returns" element={<ReturnPolicy />} />
                     <Route path="/terms" element={<TermsPage />} />
-                    <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-                    <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
+                    
+                    {/* CRITICAL FIX: Removed ProtectedRoute from Checkout and OrderSuccess */}
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/order-success" element={<OrderSuccessPage />} />
+                    
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                     <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
                     <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminPage /></ProtectedRoute>} />

@@ -12,16 +12,10 @@ export const CartModal = () => {
   const { cart, removeFromCart, updateQuantity, cartTotal, isCartOpen, closeCart } = useCart();
 
   const handleCheckout = () => {
-    // Close modal
+    // FIX: Close cart and go directly to checkout. 
+    // App.jsx now handles the route without 'ProtectedRoute', so guests can proceed.
     closeCart();
-    
-    // Navigate based on auth status
-    if (user) {
-      navigate('/checkout');
-    } else {
-      // Pass state to redirect back to checkout after login
-      navigate('/login', { state: { from: '/checkout' } });
-    }
+    navigate('/checkout');
   };
 
   if (!isCartOpen) return null;

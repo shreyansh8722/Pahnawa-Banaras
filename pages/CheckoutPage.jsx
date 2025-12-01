@@ -4,7 +4,7 @@ import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ArrowLeft, CreditCard, ShieldCheck, CheckCircle, ChevronRight, Tag, X, Loader2 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, writeBatch, doc, increment } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { AddressSelector } from '@/components/checkout/AddressSelector';
@@ -12,7 +12,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-// --- VALIDATION SCHEMA ---
 const shippingSchema = z.object({
   firstName: z.string().min(2, "First name is too short"),
   lastName: z.string().min(2, "Last name is too short"),
@@ -26,7 +25,6 @@ const shippingSchema = z.object({
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  // Get cart directly from Context
   const { cart, cartTotal, clearCart } = useCart();
   
   const originalSubtotal = cartTotal || 0; 
@@ -36,14 +34,12 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(true);
 
-  // Coupon State
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponMsg, setCouponMsg] = useState({ type: '', text: '' });
   const [verifyingCoupon, setVerifyingCoupon] = useState(false);
 
-  // Hook Form
   const { register, handleSubmit, formState: { errors }, setValue, getValues, trigger } = useForm({
     resolver: zodResolver(shippingSchema),
     defaultValues: {
@@ -54,16 +50,12 @@ export default function CheckoutPage() {
 
   const finalTotal = originalSubtotal - discountAmount;
 
-  // --- FIX: USE LAYOUT EFFECT FOR INSTANT SCROLL ---
-  // This runs before the paint, ensuring the user sees the top of the page immediately.
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Safety check for empty cart
   useEffect(() => {
     if (cart.length === 0) {
-        // You can uncomment this if you want strict redirect on empty cart
         // navigate('/shop'); 
     }
   }, [cart, navigate]);
@@ -126,8 +118,6 @@ export default function CheckoutPage() {
     setValue('city', addr.city);
     setValue('state', addr.state);
     setValue('pincode', addr.pincode);
-    
-    // Auto validate after filling
     trigger();
     setShowAddressForm(false);
   };
@@ -137,6 +127,7 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // --- UPDATED ORDER LOGIC WITH STOCK DECREMENT ---
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
     const formData = getValues(); 
@@ -163,10 +154,25 @@ export default function CheckoutPage() {
         createdAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      // USE BATCH TO CREATE ORDER AND UPDATE STOCK AT ONCE
+      const batch = writeBatch(db);
+      
+      // 1. Create Order
+      const newOrderRef = doc(collection(db, 'orders'));
+      batch.set(newOrderRef, orderData);
+
+      // 2. Decrement Stock for each item
+      cart.forEach(item => {
+        const productRef = doc(db, 'products', item.id);
+        batch.update(productRef, { 
+            stock: increment(-item.quantity) 
+        });
+      });
+
+      await batch.commit();
       
       if (clearCart) clearCart();
-      navigate('/order-success', { state: { orderId: docRef.id } });
+      navigate('/order-success', { state: { orderId: newOrderRef.id } });
       
     } catch (error) {
       console.error("Order failed:", error);
@@ -319,7 +325,6 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* COUPON SECTION */}
               <div className="py-4 border-t border-b border-gray-100 mb-4">
                 {appliedCoupon ? (
                     <div className="bg-green-50 border border-green-200 rounded-sm p-3 flex justify-between items-center">

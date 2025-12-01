@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Menu, Heart, Search, X, User, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Menu, Heart, Search, X, User, ChevronRight, ChevronDown, LogIn } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
@@ -80,6 +80,7 @@ export const Navbar = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [mobileExpanded, setMobileExpanded] = useState(null);
 
   const timeoutRef = useRef(null);
   const { cartCount, openCart } = useCart();
@@ -100,6 +101,7 @@ export const Navbar = () => {
   useEffect(() => {
     setActiveCategory(null);
     setMenuOpen(false);
+    setMobileExpanded(null);
   }, [location.pathname]);
 
   const handleMouseEnter = (category) => {
@@ -120,9 +122,18 @@ export const Navbar = () => {
     navigate(`/shop?cat=${cat.toLowerCase()}&sub=${subCat?.toLowerCase() || ''}`);
   };
 
+  const toggleMobileCategory = (cat) => {
+    setMobileExpanded(mobileExpanded === cat ? null : cat);
+  };
+
+  const getSpacerHeight = () => {
+    if (scrolled) return 'h-[60px] md:h-[64px]'; 
+    if (showAnnouncement) return 'h-[90px] md:h-[174px]'; 
+    return 'h-[60px] md:h-[134px]'; 
+  };
+
   return (
     <>
-      {/* 1. BACKDROP */}
       <AnimatePresence>
         {(activeCategory || menuOpen) && (
           <motion.div
@@ -134,25 +145,24 @@ export const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* 2. NAVBAR */}
-      <header className={`fixed top-0 left-0 w-full z-[50] flex flex-col bg-white transition-all duration-300 ${
+      {/* FIX: Removed 'overflow-x-hidden' to allow the dropdown to appear below the header */}
+      <header className={`fixed top-0 left-0 w-full z-[50] flex flex-col bg-[#F5F5F5] transition-all duration-300 ${
         scrolled ? 'shadow-sm' : ''
       }`}>
         
-        {/* A. ANNOUNCEMENT */}
         <AnimatePresence>
             {showAnnouncement && !scrolled && (
                 <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="w-full bg-neutral-900 text-white relative z-[61] overflow-hidden"
+                    className="w-full bg-neutral-900 text-white relative z-[61]"
                 >
-                    <div className="w-full max-w-[1800px] mx-auto px-6 py-2.5 flex justify-center items-center relative">
-                        <p className="text-[10px] font-sans uppercase tracking-[0.2em] font-medium text-center truncate opacity-90">
+                    <div className="w-full min-h-[40px] max-w-[1800px] mx-auto px-4 py-2 flex justify-center items-center relative">
+                        <p className="text-[9px] md:text-[10px] font-sans uppercase tracking-wide md:tracking-[0.2em] font-medium text-center opacity-90 w-full px-4 leading-tight">
                             Complimentary Shipping on Domestic Orders Over ₹10,000
                         </p>
-                        <button onClick={() => setShowAnnouncement(false)} className="absolute right-6 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 p-2">
+                        <button onClick={() => setShowAnnouncement(false)} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 p-2">
                             <X size={12} />
                         </button>
                     </div>
@@ -160,35 +170,36 @@ export const Navbar = () => {
             )}
         </AnimatePresence>
 
-        {/* B. MAIN NAV ROW */}
-        <div className={`w-full z-[60] relative bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            scrolled ? 'h-[64px]' : 'h-[84px]'
+        <div className={`w-full z-[60] relative bg-[#F5F5F5] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            scrolled ? 'h-[60px] md:h-[64px]' : 'h-[60px] md:h-[84px]'
         }`}>
-            <div className="w-full h-full px-6 md:px-12 max-w-[1800px] mx-auto flex items-center justify-between relative">
+            <div className="w-full h-full px-4 md:px-12 max-w-[1800px] mx-auto flex items-center justify-between relative">
             
-                {/* Left */}
-                <div className="flex items-center gap-6 z-20">
-                    <button onClick={() => setMenuOpen(true)} className={`flex items-center gap-3 group transition-all duration-300 ${scrolled ? 'opacity-100 translate-x-0' : 'lg:hidden'}`}>
+                <div className="flex items-center gap-3 md:gap-6 z-20">
+                    <button onClick={() => setMenuOpen(true)} className={`flex items-center gap-2 md:gap-3 group transition-all duration-300 ${scrolled ? 'opacity-100 translate-x-0' : 'lg:hidden'}`}>
                         <Menu size={20} strokeWidth={1} className="text-gray-800 group-hover:text-black transition-colors" />
                         <span className={`hidden lg:block text-[10px] uppercase tracking-[0.2em] font-medium text-gray-800 group-hover:text-black ${scrolled ? 'opacity-100' : 'opacity-0 w-0'}`}>Menu</span>
                     </button>
                     <TypewriterSearch onClick={() => setSearchOpen(true)} scrolled={scrolled} />
                 </div>
 
-                {/* Center Logo */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
                     <Link to="/" className="flex items-center justify-center">
-                        <img src={Logo} alt="Pahnawa" className={`object-contain transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${scrolled ? 'h-25' : 'h-30'}`} />
+                        <img 
+                            src={Logo} 
+                            alt="Pahnawa" 
+                            className={`object-contain transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                                scrolled ? 'h-20 md:h-25' : 'h-25 md:h-30'
+                            }`} 
+                        />
                     </Link>
                 </div>
 
-                {/* Right Icons - FIXED BADGES */}
-                <div className="flex justify-end items-center gap-6 md:gap-8 text-gray-800 z-20">
+                <div className="flex justify-end items-center gap-4 md:gap-8 text-gray-800 z-20">
                     <Link to={user ? "/profile" : "/login"} className="hidden md:block hover:text-black transition-colors group">
                         <User size={20} strokeWidth={1} className="group-hover:scale-105 transition-transform" />
                     </Link>
                     
-                    {/* WISHLIST BUTTON */}
                     <button onClick={() => navigate('/favorites')} className="hidden md:block hover:text-black transition-colors group relative">
                         <Heart size={20} strokeWidth={1} className="group-hover:scale-105 transition-transform" />
                         {favorites.length > 0 && (
@@ -198,7 +209,6 @@ export const Navbar = () => {
                         )}
                     </button>
 
-                    {/* CART BUTTON */}
                     <button onClick={openCart} className="relative hover:text-black transition-colors group">
                         <ShoppingBag size={20} strokeWidth={1} className="group-hover:scale-105 transition-transform" />
                         {cartCount > 0 && (
@@ -211,7 +221,6 @@ export const Navbar = () => {
             </div>
         </div>
 
-        {/* C. DESKTOP CATEGORY ROW */}
         <div className={`hidden lg:block w-full bg-[#F5F5F5] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden ${
             scrolled ? 'max-h-0 opacity-0' : 'max-h-[50px] opacity-100'
         }`} onMouseLeave={handleMouseLeave}>
@@ -219,34 +228,18 @@ export const Navbar = () => {
                 <div className="flex gap-14 items-center h-full">
                     {Object.keys(MENU_STRUCTURE).map((cat) => (
                     <div key={cat} onMouseEnter={() => handleMouseEnter(cat)} className="h-full flex items-center">
-                        <button 
-                            onClick={() => handleNavigate(cat, '')}
-                            className={`
-                                h-full flex items-center px-4
-                                text-[11px] font-sans uppercase tracking-[0.2em] transition-all duration-300
-                                ${activeCategory === cat 
-                                    ? 'text-black font-bold' 
-                                    : 'text-gray-600 hover:text-black'
-                                }
-                            `}
-                        >
+                        <button onClick={() => handleNavigate(cat, '')} className={`h-full flex items-center px-4 text-[11px] font-sans uppercase tracking-[0.2em] transition-all duration-300 ${activeCategory === cat ? 'text-black font-bold' : 'text-gray-600 hover:text-black'}`}>
                             {cat}
                         </button>
                     </div>
                     ))}
-                    
-                    <Link 
-                        to="/about" 
-                        onMouseEnter={() => setActiveCategory(null)}
-                        className="h-full flex items-center px-4 text-[11px] font-sans uppercase tracking-[0.2em] text-gray-600 hover:text-black transition-all duration-300"
-                    >
+                    <Link to="/about" onMouseEnter={() => setActiveCategory(null)} className="h-full flex items-center px-4 text-[11px] font-sans uppercase tracking-[0.2em] text-gray-600 hover:text-black transition-all duration-300">
                         Our Story
                     </Link>
                 </div>
             </div>
         </div>
 
-        {/* MEGA MENU */}
         <AnimatePresence>
           {activeCategory && !scrolled && MENU_STRUCTURE[activeCategory] && (
             <motion.div
@@ -290,42 +283,109 @@ export const Navbar = () => {
         </AnimatePresence>
       </header>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU - USER FRIENDLY & FAST */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div 
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
             transition={{ type: "tween", ease: "circOut", duration: 0.3 }}
-            className="fixed inset-0 z-[150] bg-white flex flex-col"
+            className="fixed inset-0 z-[150] bg-white flex flex-col shadow-2xl"
           >
-             <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                <span className="font-serif italic text-3xl text-black">Pahnawa.</span>
-                <button onClick={() => setMenuOpen(false)} className="p-2 -mr-2 text-black hover:rotate-90 transition-transform duration-300"><X size={24} strokeWidth={1} /></button>
+             {/* 1. PERSONALIZED HEADER (No Pahnawa Branding) */}
+             <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50/50">
+                <Link 
+                  to={user ? "/profile" : "/login"} 
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-4 group"
+                >
+                   <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-heritage-gold group-hover:border-heritage-gold transition-colors shadow-sm">
+                      {user ? <User size={22} strokeWidth={1.5} /> : <LogIn size={20} strokeWidth={1.5}/>}
+                   </div>
+                   <div className="flex flex-col">
+                      <span className="text-[10px] uppercase tracking-widest text-gray-400 font-medium mb-0.5">Welcome,</span>
+                      <span className="text-lg font-serif text-gray-900 leading-none group-hover:text-heritage-gold transition-colors">
+                        {user ? (user.displayName || 'Member') : 'Sign In / Join'}
+                      </span>
+                   </div>
+                </Link>
+                
+                <button 
+                  onClick={() => setMenuOpen(false)} 
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200/50 transition-colors"
+                >
+                  <X size={24} strokeWidth={1} className="text-gray-500" />
+                </button>
              </div>
              
-             <div className="flex-1 overflow-y-auto p-8 space-y-10">
+             {/* 2. FAST ACCORDION MENU */}
+             <div className="flex-1 overflow-y-auto px-6 py-4">
                 {Object.keys(MENU_STRUCTURE).map((cat) => (
-                  <div key={cat} onClick={() => handleNavigate(cat, '')} className="group cursor-pointer">
-                    <div className="flex justify-between items-baseline mb-4">
-                      <span className="text-3xl font-serif text-black group-hover:translate-x-2 transition-transform duration-300">{cat}</span>
-                      <ChevronRight size={16} className="text-gray-300" />
-                    </div>
-                    <div className="flex flex-wrap gap-2 opacity-60">
-                      {Object.values(MENU_STRUCTURE[cat].sections)[0].slice(0, 3).map(sub => (
-                         <span key={sub} className="text-[10px] uppercase tracking-widest text-gray-500">{sub} <span className="mx-1 text-gray-300">/</span></span>
-                      ))}
-                    </div>
+                  <div key={cat} className="border-b border-gray-50 last:border-0">
+                    <button 
+                      onClick={() => toggleMobileCategory(cat)}
+                      className="w-full flex justify-between items-center py-5 group"
+                    >
+                      <span className={`text-xl font-serif transition-colors duration-200 ${mobileExpanded === cat ? 'text-heritage-gold' : 'text-gray-900'}`}>{cat}</span>
+                      <ChevronDown 
+                        size={18} 
+                        className={`text-gray-400 transition-transform duration-300 ${mobileExpanded === cat ? 'rotate-180 text-heritage-gold' : ''}`} 
+                      />
+                    </button>
+                    
+                    {/* EXPANDABLE CONTENT */}
+                    <AnimatePresence>
+                      {mobileExpanded === cat && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }} 
+                          animate={{ height: 'auto', opacity: 1 }} 
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden bg-gray-50/30 -mx-6 px-6"
+                        >
+                          <div className="py-4 space-y-6">
+                            {Object.entries(MENU_STRUCTURE[cat].sections).map(([sectionTitle, items]) => (
+                              <div key={sectionTitle}>
+                                <h5 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">{sectionTitle}</h5>
+                                <div className="grid grid-cols-2 gap-y-2 gap-x-2">
+                                  {items.map(item => (
+                                    <button 
+                                      key={item}
+                                      onClick={() => handleNavigate(cat, item)}
+                                      className="text-left text-xs text-gray-600 hover:text-heritage-gold font-medium py-1.5 px-1 rounded hover:bg-white transition-all"
+                                    >
+                                      {item}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => handleNavigate(cat, '')} 
+                              className="w-full text-center text-[10px] font-bold uppercase tracking-widest text-black border border-black py-3 hover:bg-black hover:text-white transition-colors mt-2 rounded-sm"
+                            >
+                              View All {cat}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 ))}
+                
+                <Link to="/about" onClick={() => setMenuOpen(false)} className="flex justify-between items-center py-5 border-b border-gray-50">
+                   <span className="text-xl font-serif text-gray-900">Our Story</span>
+                   <ChevronRight size={18} className="text-gray-300" />
+                </Link>
              </div>
 
-             <div className="p-8 border-t border-gray-100 bg-white">
+             {/* 3. BOTTOM ACTIONS */}
+             <div className="p-6 border-t border-gray-100 bg-white">
                 <div className="grid grid-cols-2 gap-4">
-                  <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
-                    <User size={20} strokeWidth={1} /><span className="text-[10px] uppercase tracking-widest">Account</span>
+                  <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex flex-col items-center justify-center gap-2 p-3 bg-gray-50 border border-gray-100 hover:border-gray-300 transition-colors rounded-sm">
+                    <User size={18} strokeWidth={1.5} /><span className="text-[10px] uppercase tracking-widest font-bold text-gray-600">Account</span>
                   </Link>
-                  <Link to="/favorites" onClick={() => setMenuOpen(false)} className="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
-                    <Heart size={20} strokeWidth={1} /><span className="text-[10px] uppercase tracking-widest">Wishlist</span>
+                  <Link to="/favorites" onClick={() => setMenuOpen(false)} className="flex flex-col items-center justify-center gap-2 p-3 bg-gray-50 border border-gray-100 hover:border-gray-300 transition-colors rounded-sm">
+                    <Heart size={18} strokeWidth={1.5} /><span className="text-[10px] uppercase tracking-widest font-bold text-gray-600">Wishlist</span>
                   </Link>
                 </div>
              </div>
@@ -335,7 +395,7 @@ export const Navbar = () => {
 
       <SearchPopup isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       
-      <div className={`transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${scrolled ? 'h-[64px]' : (showAnnouncement ? 'h-[172px]' : 'h-[136px]')}`} />
+      <div className={`bg-gray-200 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${getSpacerHeight()}`} />
     </>
   );
 };

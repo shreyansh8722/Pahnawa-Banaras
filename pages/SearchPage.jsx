@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit, startAt, endAt } from 'firebase/firestore';
+import { collection, getDocs, query, limit, orderBy } from 'firebase/firestore';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ProductCard } from '@/components/shop/ProductCard';
@@ -12,63 +12,57 @@ import { useCart } from '@/context/CartContext';
 
 export default function SearchPage() {
   const [queryText, setQueryText] = useState('');
-  const debouncedQuery = useDebounce(queryText, 500); // Wait 500ms before searching
+  // Faster debounce for instant feel
+  const debouncedQuery = useDebounce(queryText, 300); 
   
+  const [allProducts, setAllProducts] = useState([]);
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
   
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
+  // 1. Fetch ALL products once on mount (Optimized for speed)
   useEffect(() => {
-    const performSearch = async () => {
-      if (!debouncedQuery || debouncedQuery.length < 2) {
-        setResults([]);
-        return;
-      }
-
-      setLoading(true);
+    const fetchAllForSearch = async () => {
       try {
-        // Capitalize first letter to match DB format (e.g. "saree" -> "Saree")
-        const searchTerm = debouncedQuery.charAt(0).toUpperCase() + debouncedQuery.slice(1);
-        
-        const productsRef = collection(db, 'products');
-        
-        // 1. Try searching by Name (Prefix Search)
-        // This finds "Saree", "Saree Red", etc.
-        const q = query(
-            productsRef, 
-            orderBy('name'), 
-            startAt(searchTerm), 
-            endAt(searchTerm + '\uf8ff'),
-            limit(20)
-        );
-
+        // Fetch up to 100 recent items for fast client-side searching
+        // For a larger store, we would paginate or use Algolia
+        const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(100));
         const snap = await getDocs(q);
-        let docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // 2. If no results, try searching by SubCategory (e.g. "Lehenga")
-        if (docs.length === 0) {
-             const catQ = query(
-                productsRef, 
-                where('subCategory', '==', searchTerm),
-                limit(20)
-             );
-             const catSnap = await getDocs(catQ);
-             docs = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
-
-        setResults(docs);
+        const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllProducts(docs);
       } catch (err) {
-        console.error("Search error:", err);
+        console.error("Search index init failed:", err);
       } finally {
         setLoading(false);
       }
     };
+    fetchAllForSearch();
+  }, []);
 
-    performSearch();
-  }, [debouncedQuery]);
+  // 2. Client-Side Filtering (Instant & Smart)
+  useEffect(() => {
+    if (!debouncedQuery || debouncedQuery.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    const lowerQuery = debouncedQuery.toLowerCase();
+    
+    const filtered = allProducts.filter(p => {
+      // Search in Name, Category, SubCategory, and Tags
+      const inName = p.name?.toLowerCase().includes(lowerQuery);
+      const inCat = p.category?.toLowerCase().includes(lowerQuery);
+      const inSub = p.subCategory?.toLowerCase().includes(lowerQuery);
+      const inTags = p.tags_lowercase?.some(tag => tag.includes(lowerQuery));
+      
+      return inName || inCat || inSub || inTags;
+    });
+
+    setResults(filtered);
+  }, [debouncedQuery, allProducts]);
 
   return (
     <div className="min-h-screen bg-white font-sans text-brand-dark flex flex-col w-full overflow-x-hidden">
@@ -107,7 +101,7 @@ export default function SearchPage() {
           {loading ? (
              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-gray-300" /></div>
           ) : results.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 gap-y-8 md:gap-x-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 gap-y-8 md:gap-x-8 animate-fade-in">
               {results.map(item => (
                 <ProductCard key={item.id} item={item} onAddToCart={(p) => { addToCart(p); setShowCart(true); }} />
               ))}

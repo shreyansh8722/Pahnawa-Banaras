@@ -27,8 +27,10 @@ export const LazyImage = ({ src, alt, className, isPriority = false }) => {
         src={src}
         alt={alt || "Pahnawa Banaras"}
         loading={isPriority ? "eager" : "lazy"}
-        // FIX: React expects lowercase 'fetchpriority' for this attribute
+        // React expects lowercase 'fetchpriority' for this attribute
         fetchpriority={isPriority ? "high" : "auto"}
+        // NEW: Helps browser allocate space/resources correctly
+        sizes="(max-width: 768px) 100vw, 50vw" 
         onLoad={() => setLoaded(true)}
         className={`w-full h-full object-cover transition-opacity duration-500 ${
           loaded ? "opacity-100" : "opacity-0"

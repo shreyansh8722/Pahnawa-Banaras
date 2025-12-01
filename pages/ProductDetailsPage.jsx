@@ -12,12 +12,13 @@ import toast from 'react-hot-toast';
 import { SEO } from '@/components/SEO';
 import { SizeChartModal } from '@/components/shop/SizeChartModal';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { ProductReviews } from '@/components/shop/ProductReviews';
+import { ImageZoomModal } from '@/components/shop/ImageZoomModal'; // NEW IMPORT
 import { 
   ChevronDown, MessageCircle, ShieldCheck, Truck, 
-  Share2, Heart, Ruler, CheckCircle2, Lock, ChevronLeft, ChevronRight, Copy, Info
+  Share2, Heart, Ruler, CheckCircle2, Lock, ChevronLeft, ChevronRight, Copy, Info, Star, AlertCircle
 } from 'lucide-react';
 
-// --- 1. HELPER: WISHLIST POPUP ---
 const WishlistToast = ({ product, visible }) => (
   <div className={`${visible ? 'animate-enter' : 'animate-leave'} fixed bottom-4 left-4 bg-white border border-heritage-gold/30 p-3 shadow-[0_4px_12px_rgba(0,0,0,0.08)] rounded-sm flex gap-3 z-[100] max-w-[280px]`}>
     <img src={product.featuredImageUrl} alt="" className="w-12 h-16 object-cover rounded-sm" />
@@ -28,7 +29,6 @@ const WishlistToast = ({ product, visible }) => (
   </div>
 );
 
-// --- 2. HELPER: CUSTOMIZATION OPTION ROW ---
 const AddonOption = ({ label, price, isChecked, onChange, description }) => (
   <label className={`flex items-start gap-3 cursor-pointer group p-4 border rounded-sm transition-all duration-300 bg-white ${isChecked ? 'border-heritage-gold bg-heritage-gold/5' : 'border-heritage-border/60 hover:border-heritage-charcoal'}`}>
     <div className="pt-0.5">
@@ -44,7 +44,7 @@ const AddonOption = ({ label, price, isChecked, onChange, description }) => (
   </label>
 );
 
-// --- 3. LUXURY MAGNIFIER COMPONENT ---
+// --- DESKTOP MAGNIFIER ---
 const ImageMagnifier = ({ src, alt }) => {
   const [showMagnifier, setShowMagnifier] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -64,12 +64,17 @@ const ImageMagnifier = ({ src, alt }) => {
 
   return (
     <div 
-      className="relative w-full h-full overflow-hidden bg-heritage-sand/20 cursor-pointer group rounded-sm"
+      className="relative w-full h-full overflow-hidden bg-stone-50 cursor-crosshair group rounded-sm"
       onMouseEnter={() => setShowMagnifier(true)}
       onMouseLeave={() => setShowMagnifier(false)}
       onMouseMove={handleMouseMove}
     >
-      <img ref={imgRef} src={src} alt={alt} className="w-full h-full object-cover transition-transform duration-500" />
+      <img 
+        ref={imgRef} 
+        src={src} 
+        alt={alt} 
+        className="w-full h-full object-cover transition-transform duration-500" 
+      />
       <div 
         className="absolute inset-0 pointer-events-none hidden lg:block z-20"
         style={{
@@ -83,32 +88,74 @@ const ImageMagnifier = ({ src, alt }) => {
   );
 };
 
-// --- 4. GALLERY COMPONENT ---
-const ProductGallery = ({ images, productName }) => {
+// --- UPDATED GALLERY COMPONENT ---
+const ProductGallery = ({ images, productName, onOpenZoom }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef(null);
+
+  // Sync scroll for mobile dots
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const index = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
+      setActiveIndex(index);
+    }
+  };
+
   return (
-    <div className="flex flex-col-reverse lg:flex-row gap-4 items-start">
-      <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto scrollbar-hide lg:w-24 shrink-0 hide-scrollbar py-1 px-1">
-        {images.map((img, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveIndex(i)}
-            className={`relative w-20 h-24 lg:w-full lg:h-32 shrink-0 overflow-hidden border rounded-sm transition-all duration-300 ${
-              activeIndex === i ? 'border-heritage-gold opacity-100 ring-1 ring-heritage-gold shadow-sm' : 'border-transparent opacity-70 hover:opacity-100'
-            }`}
-          >
-            <img src={img} alt="" className="w-full h-full object-cover" />
-          </button>
-        ))}
+    <div className="flex flex-col gap-4 relative">
+      
+      {/* 1. MOBILE VIEW: Swipe Slider + Dots */}
+      <div className="lg:hidden relative">
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="w-full aspect-[3/4] overflow-x-auto snap-x snap-mandatory flex scrollbar-hide rounded-sm"
+        >
+          {images.map((img, i) => (
+            <div 
+              key={i} 
+              className="w-full flex-shrink-0 snap-center relative"
+              onClick={() => onOpenZoom(i)} // Trigger Zoom Modal
+            >
+              <img src={img} alt={productName} className="w-full h-full object-cover" />
+            </div>
+          ))}
+        </div>
+        
+        {/* Dots Overlay */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {images.map((_, i) => (
+            <div 
+              key={i} 
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === activeIndex ? 'bg-heritage-gold w-3' : 'bg-white/60'}`} 
+            />
+          ))}
+        </div>
       </div>
-      <div className="flex-1 relative w-full aspect-[3/4] lg:aspect-[3/4] shadow-sm border border-heritage-border/20 rounded-sm">
-        <ImageMagnifier src={images[activeIndex]} alt={productName} />
+
+      {/* 2. DESKTOP VIEW: Thumbnails + Main Image */}
+      <div className="hidden lg:flex flex-row gap-4 items-start">
+        <div className="flex flex-col gap-3 overflow-y-auto scrollbar-hide w-24 shrink-0 max-h-[600px]">
+          {images.map((img, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveIndex(i)}
+              className={`relative w-20 h-24 shrink-0 overflow-hidden border rounded-sm transition-all duration-300 bg-stone-50 ${
+                activeIndex === i ? 'border-heritage-gold opacity-100 ring-1 ring-heritage-gold shadow-sm' : 'border-transparent opacity-70 hover:opacity-100'
+              }`}
+            >
+              <img src={img} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 relative w-full aspect-[3/4] shadow-sm border border-heritage-border/20 rounded-sm">
+          <ImageMagnifier src={images[activeIndex]} alt={productName} />
+        </div>
       </div>
     </div>
   );
 };
 
-// --- 5. ACCORDION COMPONENT ---
 const Accordion = ({ title, children, isOpen, onClick }) => (
   <div className="border-b border-heritage-border/60">
     <button onClick={onClick} className="w-full flex justify-between items-center py-5 group text-left">
@@ -125,7 +172,6 @@ const Accordion = ({ title, children, isOpen, onClick }) => (
   </div>
 );
 
-// --- MAIN PAGE COMPONENT ---
 export default function ProductDetailsPage() {
   const { productId } = useParams();
   const { addToCart } = useCart();
@@ -138,6 +184,10 @@ export default function ProductDetailsPage() {
   const [activeSection, setActiveSection] = useState('care'); 
   const [pincode, setPincode] = useState('');
   
+  // New State for Zoom Modal
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(0);
+  
   const [selectedAddons, setSelectedAddons] = useState({ 
     fallPico: false, 
     blouseStitching: false,
@@ -145,21 +195,15 @@ export default function ProductDetailsPage() {
   });
   
   const [showSizeChart, setShowSizeChart] = useState(false);
-
-  // Use the hook to determine wishlisted status instead of local state
   const isWishlisted = product ? isFavorite(product.id) : false;
 
-  // FIX: Force Scroll to Top whenever Loading state changes or ProductID changes
   useLayoutEffect(() => {
     if (!loading) {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
   }, [loading, productId]);
 
-  // Fetch Main Product
   useEffect(() => {
-    // Note: We don't scroll here anymore to avoid race conditions. 
-    // The useLayoutEffect above handles it more reliably.
     setLoading(true);
     const unsub = onSnapshot(doc(db, 'products', productId), (doc) => {
       if (doc.exists()) {
@@ -172,7 +216,6 @@ export default function ProductDetailsPage() {
     return () => unsub();
   }, [productId]);
 
-  // Fetch Related Products
   useEffect(() => {
     if (!product) return;
     const fetchRelated = async () => {
@@ -180,15 +223,13 @@ export default function ProductDetailsPage() {
         const qCategory = query(
           collection(db, 'products'), 
           where('category', '==', product.category),
-          limit(5) 
+          limit(6) 
         );
         let querySnapshot = await getDocs(qCategory);
-        
         if (querySnapshot.size <= 1) {
-           const qAll = query(collection(db, 'products'), limit(5));
+           const qAll = query(collection(db, 'products'), limit(6));
            querySnapshot = await getDocs(qAll);
         }
-
         let related = [];
         querySnapshot.forEach((doc) => {
           if (doc.id !== product.id) {
@@ -208,6 +249,32 @@ export default function ProductDetailsPage() {
      return product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls : [product.featuredImageUrl];
   }, [product]);
 
+  const productSchema = useMemo(() => {
+    if (!product) return null;
+    return {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": product.name,
+      "image": images,
+      "description": product.fullDescription || product.description,
+      "sku": product.sku || product.id,
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": product.averageRating || 5,
+        "reviewCount": product.reviewCount || 1
+      },
+      "brand": { "@type": "Brand", "name": "Pahnawa Banaras" },
+      "offers": {
+        "@type": "Offer",
+        "url": window.location.href,
+        "priceCurrency": "INR",
+        "price": product.price,
+        "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "itemCondition": "https://schema.org/NewCondition"
+      }
+    };
+  }, [product, images]);
+
   const hasSizeChart = product && ['suit', 'blouse', 'lehenga', 'kurta', 'jacket'].some(c => product.subCategory?.toLowerCase().includes(c));
   const isSaree = product?.subCategory?.toLowerCase().includes('saree');
   
@@ -218,16 +285,15 @@ export default function ProductDetailsPage() {
   if (selectedAddons.tassels) addonTotal += 250;
   const finalPrice = basePrice + addonTotal;
 
+  const isLowStock = product && product.stock < 5 && product.stock > 0;
+
   const handleAddToCart = () => {
     addToCart({ ...product, price: finalPrice, selectedOptions: selectedAddons, quantity: 1 });
     toast.success("Added to Bag", { position: 'bottom-center' });
   };
 
   const handleWishlistToggle = () => {
-    // UPDATED LOGIC: Use the global hook to save to DB
     toggleFavorite(product.id);
-    
-    // Maintain your original toast behavior for adding items
     if (!isWishlisted) {
       toast.custom((t) => <WishlistToast product={product} visible={t.visible} />, {
         position: 'bottom-left',
@@ -238,13 +304,7 @@ export default function ProductDetailsPage() {
 
   const handleShare = async () => {
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: product.name,
-          text: `Check out this beautiful ${product.name} on Pahnawa Banaras.`,
-          url: window.location.href,
-        });
-      } catch (error) { console.log('Error sharing:', error); }
+      try { await navigator.share({ title: product.name, text: `Check out this beautiful ${product.name} on Pahnawa Banaras.`, url: window.location.href }); } catch (error) { console.log('Error sharing:', error); }
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success("Link copied to clipboard", { icon: <Copy size={18}/> });
@@ -255,27 +315,27 @@ export default function ProductDetailsPage() {
     window.open(`https://wa.me/919876543210?text=I am interested in ${product.name} (SKU: ${product.sku || product.id.substring(0, 8)})`, '_blank');
   };
 
-  // --- RENDER ---
   return (
     <div className="min-h-screen bg-heritage-paper text-heritage-charcoal font-sans">
-      <SEO title={product ? product.name : 'Loading...'} />
+      {product ? (
+        <SEO 
+          title={product.name} 
+          description={product.fullDescription?.substring(0, 160)}
+          image={product.featuredImageUrl}
+          schema={productSchema}
+        />
+      ) : ( <SEO title="Loading Product..." /> )}
+
       <Navbar />
 
-      {/* LAYOUT FIX: 
-        Navbar is always rendered above. 
-        If loading, we show Skeleton but KEEP the Navbar. 
-        This prevents layout shifts that mess up scroll position.
-      */}
-      
       {loading || !product ? (
         <div className="pt-4 px-6">
            <AppSkeleton />
         </div>
       ) : (
-        <div className="pt-4 pb-24 px-6 md:px-8 lg:px-12 max-w-[1400px] mx-auto animate-fade-in">
+        <div className="pt-4 pb-24 px-4 md:px-8 lg:px-12 max-w-[1400px] mx-auto animate-fade-in">
           
-          {/* --- TOP NAVIGATION BAR --- */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-4 border-b border-heritage-border/40 text-[10px] uppercase tracking-[0.15em] text-heritage-grey font-medium">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 pb-4 border-b border-heritage-border/40 text-[10px] uppercase tracking-[0.15em] text-heritage-grey font-medium">
              <div className="flex gap-2 items-center flex-wrap">
                <Link to="/" className="hover:text-heritage-gold transition-colors">Home</Link> 
                <span className="text-heritage-border">/</span> 
@@ -290,23 +350,40 @@ export default function ProductDetailsPage() {
              </div>
           </div>
 
-          {/* --- MAIN PRODUCT LAYOUT --- */}
-          <main className="flex flex-col lg:flex-row gap-12 lg:gap-20 items-start">
+          <main className="flex flex-col lg:flex-row gap-8 lg:gap-20 items-start">
             
-            {/* LEFT: GALLERY */}
+            {/* UPDATED PRODUCT GALLERY */}
             <div className="w-full lg:w-[58%]">
-               <ProductGallery images={images} productName={product.name} />
+               <ProductGallery 
+                 images={images} 
+                 productName={product.name} 
+                 onOpenZoom={(idx) => {
+                    setZoomIndex(idx);
+                    setIsZoomOpen(true);
+                 }}
+               />
             </div>
 
-            {/* RIGHT: DETAILS */}
             <div className="w-full lg:w-[42%] flex flex-col">
               
-              {/* Header Section */}
               <div className="mb-6">
                  <div className="flex justify-between items-start mb-4">
-                   <h1 className="font-serif text-3xl lg:text-4xl font-light text-heritage-charcoal leading-tight max-w-md">
-                     {product.name}
-                   </h1>
+                   <div className="max-w-md">
+                     <h1 className="font-serif text-2xl md:text-3xl lg:text-4xl font-light text-heritage-charcoal leading-tight mb-2">
+                       {product.name}
+                     </h1>
+                     <div className="flex items-center gap-2 mb-1">
+                        <div className="flex text-heritage-gold">
+                           {Array.from({ length: 5 }).map((_, i) => (
+                             <Star key={i} size={14} className={i < Math.round(product.averageRating || 5) ? 'fill-current' : 'text-gray-200'} />
+                           ))}
+                        </div>
+                        <a href="#reviews" className="text-xs text-stone-500 hover:text-heritage-gold transition-colors">
+                           ({product.reviewCount || 0} reviews)
+                        </a>
+                     </div>
+                   </div>
+                   
                    <div className="flex gap-5 text-heritage-charcoal/70 pt-2">
                      <button onClick={handleWishlistToggle} className="hover:text-heritage-gold transition-colors group relative">
                        <Heart size={24} fill={isWishlisted ? "#9D8461" : "none"} stroke={isWishlisted ? "#9D8461" : "currentColor"} strokeWidth={1.2} className="group-active:scale-90 transition-transform" />
@@ -324,19 +401,24 @@ export default function ProductDetailsPage() {
                        In Stock
                      </span>
                    </div>
-                   <p className="text-xs text-heritage-grey">Inclusive of all taxes</p>
+                   
+                   {isLowStock && (
+                     <div className="flex items-center gap-2 text-orange-600 text-xs font-medium mt-1 animate-pulse">
+                        <AlertCircle size={14} /> Only {product.stock} left - Order soon!
+                     </div>
+                   )}
+
+                   <p className="text-xs text-heritage-grey mt-1">Inclusive of all taxes</p>
                    <p className="text-[10px] uppercase tracking-widest text-heritage-grey mt-2 font-medium">
                      SKU: <span className="text-heritage-charcoal">{product.sku || product.id.substring(0, 8).toUpperCase()}</span>
                    </p>
                  </div>
               </div>
 
-              {/* --- DESCRIPTION & HIGHLIGHTS --- */}
               <div className="mb-8">
                  <p className="font-sans text-sm text-heritage-charcoal/80 leading-relaxed mb-6 font-light">
                    {product.description || product.fullDescription}
                  </p>
-                 
                  <div className="bg-heritage-paper border border-heritage-border/60 p-5 rounded-sm">
                     <h3 className="text-xs font-serif italic text-heritage-gold mb-3 flex items-center gap-2"><Info size={14}/> Product Highlights</h3>
                     <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
@@ -348,83 +430,44 @@ export default function ProductDetailsPage() {
                  </div>
               </div>
 
-              {/* Customizations */}
               <div className="space-y-8 mb-10">
                  {hasSizeChart && (
                    <div className="flex justify-between items-center border-b border-heritage-border/40 pb-2">
                      <span className="text-sm font-medium font-serif italic text-heritage-charcoal">Select Size</span>
-                     <button 
-                       onClick={() => setShowSizeChart(true)}
-                       className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-heritage-gold hover:text-heritage-charcoal transition-colors group"
-                     >
+                     <button onClick={() => setShowSizeChart(true)} className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-heritage-gold hover:text-heritage-charcoal transition-colors group">
                        <Ruler size={14} /> <span className="border-b border-heritage-gold group-hover:border-heritage-charcoal">Size Guide</span>
                      </button>
                    </div>
                  )}
-
                  <div className="space-y-4">
                    <h3 className="text-sm font-medium font-serif italic text-heritage-charcoal">Customization Services</h3>
-                   <AddonOption 
-                     label="Add Fall & Pico" 
-                     price={150} 
-                     isChecked={selectedAddons.fallPico}
-                     onChange={() => setSelectedAddons(p => ({...p, fallPico: !p.fallPico}))}
-                     description="Essential finish for sarees. Adds 1-2 days to delivery."
-                   />
+                   <AddonOption label="Add Fall & Pico" price={150} isChecked={selectedAddons.fallPico} onChange={() => setSelectedAddons(p => ({...p, fallPico: !p.fallPico}))} description="Essential finish for sarees. Adds 1-2 days to delivery." />
                    {isSaree && (
                      <>
-                       <AddonOption 
-                         label="Premium Tassels / Kuchu" 
-                         price={250} 
-                         isChecked={selectedAddons.tassels}
-                         onChange={() => setSelectedAddons(p => ({...p, tassels: !p.tassels}))}
-                         description="Handcrafted tassels added to the pallu."
-                       />
-                       <AddonOption 
-                         label="Tailored Blouse Stitching" 
-                         price={1200} 
-                         isChecked={selectedAddons.blouseStitching}
-                         onChange={() => setSelectedAddons(p => ({...p, blouseStitching: !p.blouseStitching}))}
-                         description="Our stylist will contact you for measurements. Adds 5-7 days."
-                       />
+                       <AddonOption label="Premium Tassels / Kuchu" price={250} isChecked={selectedAddons.tassels} onChange={() => setSelectedAddons(p => ({...p, tassels: !p.tassels}))} description="Handcrafted tassels added to the pallu." />
+                       <AddonOption label="Tailored Blouse Stitching" price={1200} isChecked={selectedAddons.blouseStitching} onChange={() => setSelectedAddons(p => ({...p, blouseStitching: !p.blouseStitching}))} description="Our stylist will contact you for measurements. Adds 5-7 days." />
                      </>
                    )}
                  </div>
               </div>
 
-              {/* Actions */}
               <div className="flex flex-col gap-4 mb-6">
-                 <button 
-                   onClick={handleAddToCart}
-                   className="w-full bg-heritage-charcoal text-white h-14 uppercase tracking-[0.2em] text-[11px] font-medium hover:bg-heritage-gold transition-all duration-500 shadow-sm hover:shadow-md rounded-sm flex items-center justify-center gap-3"
-                 >
+                 <button onClick={handleAddToCart} className="w-full bg-heritage-charcoal text-white h-14 uppercase tracking-[0.2em] text-[11px] font-medium hover:bg-heritage-gold transition-all duration-500 shadow-sm hover:shadow-md rounded-sm flex items-center justify-center gap-3">
                    <span>{addonTotal > 0 ? `Add to Cart • ₹${formatPrice(finalPrice)}` : 'Add to Cart'}</span>
                  </button>
-                 <button 
-                   onClick={handleConsult}
-                   className="w-full border border-heritage-charcoal/40 text-heritage-charcoal h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-heritage-charcoal hover:bg-heritage-sand/30 flex items-center justify-center gap-3 transition-all duration-300 rounded-sm"
-                 >
+                 <button onClick={handleConsult} className="w-full border border-heritage-charcoal/40 text-heritage-charcoal h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-heritage-charcoal hover:bg-heritage-sand/30 flex items-center justify-center gap-3 transition-all duration-300 rounded-sm">
                    <MessageCircle size={16} strokeWidth={1} /> Enquire on WhatsApp
                  </button>
               </div>
 
-              {/* Delivery Checker */}
               <div className="bg-gray-50/50 p-5 rounded-sm mb-12 border border-gray-200">
                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Truck size={14}/> Check Delivery</h4>
                  <div className="flex border-b border-gray-300 pb-2 relative">
-                   <input 
-                     type="text" 
-                     placeholder="Enter Pincode" 
-                     value={pincode}
-                     onChange={(e) => setPincode(e.target.value)}
-                     className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-400 font-sans pl-1"
-                     maxLength={6}
-                   />
+                   <input type="text" placeholder="Enter Pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-400 font-sans pl-1" maxLength={6} />
                    <button className="text-[10px] font-bold text-heritage-gold uppercase tracking-widest hover:text-heritage-charcoal transition-colors absolute right-0 bottom-2">Check</button>
                  </div>
               </div>
 
-              {/* Remaining Accordions (Material/Care/Shipping) */}
               <div className="mb-12">
                 <Accordion title="Material & Care" isOpen={activeSection === 'care'} onClick={() => setActiveSection(activeSection === 'care' ? '' : 'care')}>
                   <div className="space-y-4">
@@ -447,7 +490,6 @@ export default function ProductDetailsPage() {
                      </div>
                   </div>
                 </Accordion>
-
                 <Accordion title="Shipping & Returns" isOpen={activeSection === 'shipping'} onClick={() => setActiveSection(activeSection === 'shipping' ? '' : 'shipping')}>
                    <div className="space-y-3 text-sm text-heritage-charcoal/80">
                       <p><strong>Shipping:</strong> Dispatched within 24-48 hours. Domestic delivery takes 3-5 business days.</p>
@@ -456,8 +498,8 @@ export default function ProductDetailsPage() {
                 </Accordion>
               </div>
 
-              {/* --- TRUST BADGES (BOTTOM) --- */}
-              <div className="grid grid-cols-3 gap-4 text-center border-t border-heritage-border/40 pt-8 opacity-70">
+              {/* FIX: Centered Trust Badges using Flexbox and Py-8 */}
+              <div className="flex justify-around items-center border-t border-heritage-border/40 py-8 opacity-70">
                   <div className="flex flex-col items-center gap-2">
                      <ShieldCheck size={20} className="text-heritage-charcoal" strokeWidth={1}/>
                      <span className="text-[9px] uppercase tracking-widest font-medium">Authentic</span>
@@ -475,8 +517,9 @@ export default function ProductDetailsPage() {
             </div>
           </main>
 
-          {/* --- YOU MAY ALSO LIKE SECTION --- */}
-          <section className="mt-32 border-t border-heritage-border/40 pt-16">
+          <ProductReviews productId={product.id} />
+
+          <section className="mt-12 border-t border-heritage-border/40 pt-16">
              <h2 className="text-center font-serif text-3xl italic text-heritage-charcoal mb-12">You May Also Like</h2>
              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10">
                {relatedProducts.length > 0 ? (
@@ -494,20 +537,25 @@ export default function ProductDetailsPage() {
         </div>
       )}
       
-      {/* Mobile Sticky Footer (Only visible if Product is loaded) */}
       {!loading && product && (
         <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-heritage-border p-4 z-50 flex gap-4 items-center safe-area-bottom shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
            <div className="flex-1">
              <p className="text-xs font-serif text-heritage-charcoal truncate mb-0.5">{product.name}</p>
              <p className="text-sm font-bold text-heritage-charcoal">₹{formatPrice(finalPrice)}</p>
            </div>
-           <button 
-             onClick={handleAddToCart}
-             className="bg-heritage-charcoal text-white px-8 py-3 text-[10px] uppercase tracking-widest rounded-sm"
-           >
+           <button onClick={handleAddToCart} className="bg-heritage-charcoal text-white px-8 py-3 text-[10px] uppercase tracking-widest rounded-sm">
              Add to Bag
            </button>
         </div>
+      )}
+
+      {product && (
+        <ImageZoomModal 
+          isOpen={isZoomOpen} 
+          onClose={() => setIsZoomOpen(false)} 
+          images={images} 
+          initialIndex={zoomIndex} 
+        />
       )}
 
       {product && (

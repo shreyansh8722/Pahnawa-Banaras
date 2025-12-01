@@ -8,11 +8,59 @@ import {
   ref, uploadBytes, getDownloadURL 
 } from 'firebase/storage';
 import { 
-  Trash2, Plus, Image as ImageIcon, Loader2, X, 
+  Trash2, Plus, Loader2, X, 
   Edit2, Save, Search, ChevronRight, UploadCloud 
 } from 'lucide-react';
 import { compressImage } from '@/lib/utils'; 
 import { motion, AnimatePresence } from 'framer-motion';
+
+// --- DND-KIT IMPORTS ---
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// --- SORTABLE IMAGE COMPONENT ---
+const SortableImage = ({ id, url, isNew, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group cursor-grab active:cursor-grabbing bg-white">
+      <img src={url} className={`w-full h-full object-cover ${isNew ? 'opacity-80' : ''}`} alt="product thumbnail" />
+      {isNew && <div className="absolute inset-0 bg-green-500/10 pointer-events-none" />}
+      <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onDelete} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10">
+        <X size={12} />
+      </button>
+      {/* Drag Handle Indicator */}
+      <div className="absolute bottom-1 right-1 bg-black/30 text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+      </div>
+    </div>
+  );
+};
 
 export const ProductManager = ({ notify }) => { 
   const [products, setProducts] = useState([]);
@@ -27,17 +75,27 @@ export const ProductManager = ({ notify }) => {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // --- UPDATED INITIAL STATE WITH NEW FIELDS ---
+  // --- UPDATED STATE FOR IMAGES ---
+  const [combinedImages, setCombinedImages] = useState([]);
+
+  // --- DND SENSORS ---
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const initialState = {
     name: '',
-    sku: '', // New
+    sku: '', 
     price: '',
     comparePrice: '',
     category: '', 
     description: '',
     stock: '',
     
-    // New Luxury Specs
+    // Luxury Specs
     technique: '', 
     fabric: '', 
     warpMaterial: '',
@@ -47,9 +105,6 @@ export const ProductManager = ({ notify }) => {
     weight: '',
     dimensions: '',
     care: 'Dry Clean Only',
-
-    images: [],      
-    existingImages: [] 
   };
 
   const [formData, setFormData] = useState(initialState);
@@ -98,13 +153,35 @@ export const ProductManager = ({ notify }) => {
     }
   }, [searchQuery, products]);
 
+  // --- UPDATED IMAGE SELECTION ---
   const handleImageSelect = (e) => {
     if (e.target.files) {
-      setFormData(prev => ({ 
-        ...prev, 
-        images: [...prev.images, ...Array.from(e.target.files)] 
+      const newFiles = Array.from(e.target.files);
+      const newImageObjects = newFiles.map((file, index) => ({
+          id: `new-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'new',
+          url: URL.createObjectURL(file),
+          file: file
       }));
+      setCombinedImages(prev => [...prev, ...newImageObjects]);
     }
+  };
+
+  // --- DND HANDLERS ---
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setCombinedImages((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleDeleteImage = (id) => {
+    setCombinedImages(prev => prev.filter(item => item.id !== id));
   };
 
   const openDrawer = (product = null) => {
@@ -130,14 +207,23 @@ export const ProductManager = ({ notify }) => {
         weight: product.weight || '',
         dimensions: product.dimensions || '',
         care: product.care || 'Dry Clean Only',
-
-        images: [],
-        existingImages: product.imageUrls || [product.featuredImageUrl]
       });
+      
+      // Initialize combinedImages from existing URLs
+      setCombinedImages(
+        (product.imageUrls || []).map((url, index) => ({
+            id: `existing-${product.id}-${index}`,
+            type: 'existing',
+            url: url,
+            file: null
+        }))
+      );
+
     } else {
       setEditMode(false);
       setEditId(null);
       setFormData(initialState);
+      setCombinedImages([]);
     }
     setIsDrawerOpen(true);
   };
@@ -146,11 +232,18 @@ export const ProductManager = ({ notify }) => {
     setIsDrawerOpen(false);
     setEditMode(false);
     setEditId(null);
+    // Revoke object URLs to avoid memory leaks
+    combinedImages.forEach(item => {
+      if (item.type === 'new') {
+        URL.revokeObjectURL(item.url);
+      }
+    });
+    setCombinedImages([]);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.images.length === 0 && formData.existingImages.length === 0) {
+    if (combinedImages.length === 0) {
       return notify("Please upload at least one image.", "error");
     }
     if (!formData.category) {
@@ -159,16 +252,21 @@ export const ProductManager = ({ notify }) => {
 
     setProcessing(true);
     try {
-      let newImageUrls = [];
-      for (const file of formData.images) {
-        const compressedFile = await compressImage(file); 
-        const imageRef = ref(storage, `products/${Date.now()}_${compressedFile.name}`);
-        await uploadBytes(imageRef, compressedFile);
-        const url = await getDownloadURL(imageRef);
-        newImageUrls.push(url);
+      let finalImageUrls = [];
+      
+      // Process images in their new order
+      for (const item of combinedImages) {
+        if (item.type === 'existing') {
+            finalImageUrls.push(item.url);
+        } else {
+            // Upload new image
+            const compressedFile = await compressImage(item.file, 2000, 0.85); 
+            const imageRef = ref(storage, `products/${Date.now()}_${compressedFile.name}`);
+            await uploadBytes(imageRef, compressedFile);
+            const url = await getDownloadURL(imageRef);
+            finalImageUrls.push(url);
+        }
       }
-
-      const finalImages = [...formData.existingImages, ...newImageUrls];
 
       const productData = {
         name: formData.name,
@@ -191,8 +289,8 @@ export const ProductManager = ({ notify }) => {
         dimensions: formData.dimensions,
         care: formData.care,
 
-        featuredImageUrl: finalImages[0], 
-        imageUrls: finalImages,
+        featuredImageUrl: finalImageUrls[0], // First image is featured
+        imageUrls: finalImageUrls,
         fullDescription: formData.description,
         updatedAt: serverTimestamp()
       };
@@ -333,32 +431,39 @@ export const ProductManager = ({ notify }) => {
               <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/50">
                 <form id="product-form" onSubmit={handleSubmit} className="space-y-8">
                   
-                  {/* Image Upload */}
+                  {/* --- UPDATED IMAGE UPLOAD SECTION WITH DND --- */}
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Product Images</label>
-                    <div className="grid grid-cols-4 gap-3">
-                        {formData.existingImages.map((url, idx) => (
-                          <div key={`ex-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
-                            <img src={url} className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => setFormData(p => ({ ...p, existingImages: p.existingImages.filter(u => u !== url) }))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={10} />
-                            </button>
-                          </div>
-                        ))}
-                        {formData.images.map((file, idx) => (
-                          <div key={`new-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border border-green-400 group">
-                            <img src={URL.createObjectURL(file)} className="w-full h-full object-cover opacity-80" />
-                            <button type="button" onClick={() => setFormData(p => ({ ...p, images: p.images.filter((_, i) => i !== idx) }))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={10} />
-                            </button>
-                          </div>
-                        ))}
-                        <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#B08D55] hover:bg-[#B08D55]/5 transition-all group">
-                            <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
-                            <UploadCloud className="text-gray-400 group-hover:text-[#B08D55] mb-1" size={20} />
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">Upload</span>
-                        </label>
-                    </div>
+                    <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Product Images (Drag to Reorder)</label>
+                    
+                    <DndContext 
+                      sensors={sensors} 
+                      collisionDetection={closestCenter} 
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext 
+                        items={combinedImages}
+                        strategy={rectSortingStrategy}
+                      >
+                        <div className="grid grid-cols-4 gap-3">
+                          {combinedImages.map((item) => (
+                            <SortableImage 
+                              key={item.id}
+                              id={item.id}
+                              url={item.url}
+                              isNew={item.type === 'new'}
+                              onDelete={() => handleDeleteImage(item.id)}
+                            />
+                          ))}
+                          
+                          <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#B08D55] hover:bg-[#B08D55]/5 transition-all group bg-gray-50">
+                              <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
+                              <UploadCloud className="text-gray-400 group-hover:text-[#B08D55] mb-1" size={20} />
+                              <span className="text-[9px] font-bold text-gray-400 uppercase">Upload</span>
+                          </label>
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                    <p className="text-[10px] text-gray-400 mt-2">The first image will be the main product image.</p>
                   </div>
 
                   {/* Basic Details */}
@@ -418,7 +523,7 @@ export const ProductManager = ({ notify }) => {
                     </div>
                   </div>
 
-                  {/* NEW: PRODUCT SPECIFICATIONS SECTION */}
+                  {/* PRODUCT SPECIFICATIONS SECTION */}
                   <div className="bg-gray-100/50 p-4 rounded-xl border border-gray-200 space-y-4">
                     <h4 className="text-xs font-bold text-gray-900 uppercase tracking-widest border-b border-gray-200 pb-2">Product Specifications</h4>
                     

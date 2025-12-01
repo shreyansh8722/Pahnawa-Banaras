@@ -56,14 +56,22 @@
 }
 
 @layer base {
-  html { scroll-behavior: smooth; }
+  html { 
+    scroll-behavior: smooth; 
+    /* FIX: Prevent horizontal scroll movement */
+    overflow-x: hidden;
+    width: 100%;
+  }
   
   body {
     background-color: var(--color-heritage-paper);
     color: var(--color-heritage-charcoal);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* FIX: Enforce no side-scrolling */
     overflow-x: hidden;
+    position: relative;
+    width: 100%;
     line-height: 1.7;
   }
 
@@ -80,7 +88,7 @@
     letter-spacing: var(--tracking-widest);
     text-transform: uppercase;
     font-weight: 500;
-    font-size: 0.8rem; /* Increased from 0.7rem for readability */
+    font-size: 0.8rem;
     transition: all 0.3s ease;
   }
 }

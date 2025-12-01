@@ -12,33 +12,12 @@ import { SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteAssets } from '@/hooks/useSiteAssets';
 
-// --- HEADER CONFIGURATION ---
 const HEADER_CONFIG = {
-  sarees: {
-    title: "The Saree Edit",
-    description: "Six yards of pure grace. Handwoven Banarasi silk masterpieces.",
-    imgKey: 'header_sarees'
-  },
-  lehengas: {
-    title: "Bridal Heirlooms",
-    description: "Intricate Jangla and Tanchoi weaves for your special day.",
-    imgKey: 'header_lehengas'
-  },
-  suits: {
-    title: "Unstitched Classics",
-    description: "Versatile silk fabrics for the contemporary wardrobe.",
-    imgKey: 'header_suits'
-  },
-  men: {
-    title: "The Royal Groom",
-    description: "Sherwanis and Kurtas crafted for nobility.",
-    imgKey: 'header_men'
-  },
-  default: {
-    title: "All Collections",
-    description: "Explore our complete range of handloom treasures.",
-    imgKey: 'header_default'
-  }
+  sarees: { title: "The Saree Edit", description: "Six yards of pure grace. Handwoven Banarasi silk masterpieces.", imgKey: 'header_sarees' },
+  lehengas: { title: "Bridal Heirlooms", description: "Intricate Jangla and Tanchoi weaves for your special day.", imgKey: 'header_lehengas' },
+  suits: { title: "Unstitched Classics", description: "Versatile silk fabrics for the contemporary wardrobe.", imgKey: 'header_suits' },
+  men: { title: "The Royal Groom", description: "Sherwanis and Kurtas crafted for nobility.", imgKey: 'header_men' },
+  default: { title: "All Collections", description: "Explore our complete range of handloom treasures.", imgKey: 'header_default' }
 };
 
 export default function ShopPage() {
@@ -48,21 +27,15 @@ export default function ShopPage() {
   const categoryParam = searchParams.get('cat');
   const activeCategory = categoryParam ? categoryParam.toLowerCase() : 'default';
   
-  // Hooks
   const { getAsset } = useSiteAssets();
   const { products, loading } = useProducts();
-  
-  // FIX: Destructure isFavorite helper
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
-  
   const { addToCart } = useCart();
   
-  // State
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
 
-  // Derive Header Data
   const config = HEADER_CONFIG[activeCategory] || HEADER_CONFIG['default'];
   const headerImage = getAsset(config.imgKey); 
 
@@ -72,11 +45,8 @@ export default function ShopPage() {
     if (categoryParam) {
       result = result.filter(p => p.category?.toLowerCase() === categoryParam.toLowerCase() || p.subCategory?.toLowerCase() === categoryParam.toLowerCase());
     }
-    
-    // Sort Logic
     if (sortBy === 'Price: Low-High') result.sort((a, b) => Number(a.price) - Number(b.price));
     else if (sortBy === 'Price: High-Low') result.sort((a, b) => Number(b.price) - Number(a.price));
-
     return result;
   }, [products, categoryParam, sortBy]);
 
@@ -89,8 +59,8 @@ export default function ShopPage() {
     <div className="min-h-screen bg-white font-serif text-heritage-charcoal selection:bg-heritage-gold selection:text-white">
       <Navbar />
       
-      {/* --- 1. DYNAMIC EDITORIAL HEADER --- */}
-      <div className="relative h-[45vh] md:h-[55vh] overflow-hidden">
+      {/* 1. HEADER - Mobile height reduced */}
+      <div className="relative h-[40vh] md:h-[55vh] overflow-hidden">
         <div className="absolute inset-0 bg-black/20 z-10" />
         <motion.img 
           key={activeCategory} 
@@ -108,46 +78,39 @@ export default function ShopPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            <span className="block text-sm font-bold font-sans uppercase tracking-[0.3em] mb-6 text-white/90">
+            <span className="block text-xs md:text-sm font-bold font-sans uppercase tracking-[0.3em] mb-4 md:mb-6 text-white/90">
               Handwoven Purity
             </span>
-            <h1 className="text-6xl md:text-8xl italic font-light mb-6 leading-none">{config.title}</h1>
-            <p className="font-sans text-base md:text-lg tracking-wide opacity-90 max-w-lg mx-auto font-light leading-relaxed">
+            {/* Reduced Title Size for Mobile */}
+            <h1 className="text-4xl md:text-8xl italic font-light mb-4 md:mb-6 leading-none">{config.title}</h1>
+            <p className="font-sans text-xs md:text-lg tracking-wide opacity-90 max-w-lg mx-auto font-light leading-relaxed">
               {config.description}
             </p>
           </motion.div>
         </div>
       </div>
 
-      {/* --- 2. MAIN LAYOUT --- */}
-      <div className="max-w-[1920px] mx-auto px-6 md:px-12 py-16 flex flex-col md:flex-row gap-16 relative">
-        
-        {/* Sticky Sidebar (Desktop) */}
+      <div className="max-w-[1920px] mx-auto px-4 md:px-12 py-8 md:py-16 flex flex-col md:flex-row gap-8 md:gap-16 relative">
         <aside className="hidden md:block w-72 shrink-0 sticky top-48 h-fit z-30">
            <FilterSidebar />
         </aside>
 
-        {/* Content Area */}
         <div className="flex-1">
-          
-          {/* Toolbar */}
-          <div className="flex justify-between items-center mb-12 pb-6 border-b border-gray-100">
-             <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+          <div className="flex justify-between items-center mb-8 md:mb-12 pb-4 md:pb-6 border-b border-gray-100">
+             <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-gray-500">
                {filteredProducts.length} Products Found
              </span>
              
-             <div className="flex gap-8">
-               {/* Mobile Filter Trigger */}
+             <div className="flex gap-6 md:gap-8">
                <button 
                  onClick={() => setMobileFiltersOpen(true)}
-                 className="md:hidden flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-heritage-charcoal"
+                 className="md:hidden flex items-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-widest text-heritage-charcoal"
                >
-                 <SlidersHorizontal size={16} /> Filters
+                 <SlidersHorizontal size={14} /> Filters
                </button>
 
-               {/* Sort Dropdown */}
                <div className="relative group">
-                 <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-heritage-gold transition-colors">
+                 <button className="flex items-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-widest hover:text-heritage-gold transition-colors">
                    Sort: <span className="text-heritage-charcoal">{sortBy}</span> <ChevronDown size={14} />
                  </button>
                  <div className="absolute right-0 top-full pt-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-40">
@@ -167,29 +130,26 @@ export default function ShopPage() {
              </div>
           </div>
 
-          {/* Product Grid */}
           {loading ? (
-             <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-16">
+             <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-16">
                {[...Array(6)].map((_, i) => <div key={i} className="aspect-[3/4] bg-gray-50 animate-pulse" />)}
              </div>
           ) : filteredProducts.length > 0 ? (
-             <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-20">
+             // Tighter Gap on Mobile
+             <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-20">
                {filteredProducts.map(product => (
                  <ProductCard 
                    key={product.id} 
                    item={product} 
                    onAddToCart={() => handleAddToCart(product)}
-                   
-                   // FIX: Use helper function
                    isFavorite={isFavorite(product.id)}
-                   
                    onToggleFavorite={toggleFavorite}
                  />
                ))}
              </div>
           ) : (
-             <div className="py-32 text-center">
-               <h3 className="font-serif text-3xl italic text-gray-400 mb-6">No treasures found matching your criteria.</h3>
+             <div className="py-20 md:py-32 text-center">
+               <h3 className="font-serif text-2xl md:text-3xl italic text-gray-400 mb-6">No treasures found matching your criteria.</h3>
                <button onClick={() => navigate('/shop')} className="text-xs uppercase font-bold tracking-widest border-b border-black pb-1 hover:text-heritage-gold hover:border-heritage-gold transition-colors">
                  Clear All Filters
                </button>
@@ -202,17 +162,16 @@ export default function ShopPage() {
       <Footer />
       <CartModal open={cartOpen} onClose={() => setCartOpen(false)} />
       
-      {/* Mobile Filter Sheet */}
       <AnimatePresence>
         {mobileFiltersOpen && (
           <motion.div 
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
             transition={{ type: "tween", ease: "circOut", duration: 0.4 }}
-            className="fixed inset-0 z-[100] bg-white p-8 md:hidden overflow-y-auto"
+            className="fixed inset-0 z-[100] bg-white p-6 md:p-8 md:hidden overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-10 pb-6 border-b border-gray-100">
-              <h2 className="font-serif text-3xl italic">Refine Selection</h2>
-              <button onClick={() => setMobileFiltersOpen(false)} className="text-xs font-bold uppercase tracking-widest">Close</button>
+            <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
+              <h2 className="font-serif text-2xl italic">Refine Selection</h2>
+              <button onClick={() => setMobileFiltersOpen(false)} className="text-[10px] font-bold uppercase tracking-widest border border-gray-200 px-3 py-1 rounded-sm">Close</button>
             </div>
             <FilterSidebar mobile />
           </motion.div>
