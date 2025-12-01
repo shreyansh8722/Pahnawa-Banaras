@@ -1,28 +1,29 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/hooks/useAuth';
 import { formatPrice } from '@/lib/utils';
 import { X, ShoppingBag, ArrowRight, Trash2, Plus, Minus, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const CartModal = () => {
   const navigate = useNavigate();
-  // Pull state directly from context to ensure it opens correctly
+  const { user } = useAuth();
   const { cart, removeFromCart, updateQuantity, cartTotal, isCartOpen, closeCart } = useCart();
 
   const handleCheckout = () => {
-    // 1. Close the modal first to prevent overlay issues
+    // Close modal
     closeCart();
     
-    // 2. Add a small timeout to allow the modal close animation to start/finish
-    // before navigating, ensuring smooth transition
-    setTimeout(() => {
-        navigate('/checkout');
-    }, 100);
+    // Navigate based on auth status
+    if (user) {
+      navigate('/checkout');
+    } else {
+      // Pass state to redirect back to checkout after login
+      navigate('/login', { state: { from: '/checkout' } });
+    }
   };
 
-  // Prevent rendering if not open (handled by AnimatePresence in App usually, 
-  // but if rendered conditionally, this ensures safety)
   if (!isCartOpen) return null;
 
   return (
@@ -79,7 +80,6 @@ export const CartModal = () => {
           ) : (
             <div className="flex flex-col gap-4">
                 {cart.map((item) => {
-                    // Use robust ID: _cartId if available, else standard id
                     const uniqueId = item._cartId || item.id;
                     
                     return (

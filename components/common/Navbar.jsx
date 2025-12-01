@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../hooks/useAuth';
+import { useFavorites } from '../../hooks/useFavorites';
 import Logo from '../../assets/logo.png';
 import { SearchPopup } from './SearchPopup';
 
@@ -82,6 +83,7 @@ export const Navbar = () => {
 
   const timeoutRef = useRef(null);
   const { cartCount, openCart } = useCart();
+  const { favorites } = useFavorites();
   const navigate = useNavigate();
   const { user } = useAuth();
   const location = useLocation();
@@ -158,7 +160,7 @@ export const Navbar = () => {
             )}
         </AnimatePresence>
 
-        {/* B. MAIN NAV ROW (Logo, Icons) - White Background */}
+        {/* B. MAIN NAV ROW */}
         <div className={`w-full z-[60] relative bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
             scrolled ? 'h-[64px]' : 'h-[84px]'
         }`}>
@@ -180,24 +182,36 @@ export const Navbar = () => {
                     </Link>
                 </div>
 
-                {/* Right Icons */}
+                {/* Right Icons - FIXED BADGES */}
                 <div className="flex justify-end items-center gap-6 md:gap-8 text-gray-800 z-20">
                     <Link to={user ? "/profile" : "/login"} className="hidden md:block hover:text-black transition-colors group">
                         <User size={20} strokeWidth={1} className="group-hover:scale-105 transition-transform" />
                     </Link>
-                    <button onClick={() => navigate('/favorites')} className="hidden md:block hover:text-black transition-colors group">
+                    
+                    {/* WISHLIST BUTTON */}
+                    <button onClick={() => navigate('/favorites')} className="hidden md:block hover:text-black transition-colors group relative">
                         <Heart size={20} strokeWidth={1} className="group-hover:scale-105 transition-transform" />
+                        {favorites.length > 0 && (
+                            <span className="absolute -top-2 -right-2 z-10 bg-black text-white text-[9px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-white">
+                                {favorites.length}
+                            </span>
+                        )}
                     </button>
+
+                    {/* CART BUTTON */}
                     <button onClick={openCart} className="relative hover:text-black transition-colors group">
                         <ShoppingBag size={20} strokeWidth={1} className="group-hover:scale-105 transition-transform" />
-                        {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-black text-white text-[9px] h-3.5 w-3.5 flex items-center justify-center rounded-full">{cartCount}</span>}
+                        {cartCount > 0 && (
+                            <span className="absolute -top-2 -right-2 z-10 bg-black text-white text-[9px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-white">
+                                {cartCount}
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>
         </div>
 
-        {/* C. DESKTOP CATEGORY ROW (Grey Background for Whole Bar) */}
-        {/* CHANGED: Applied bg-[#F5F5F5] (Light Grey) to the entire container div */}
+        {/* C. DESKTOP CATEGORY ROW */}
         <div className={`hidden lg:block w-full bg-[#F5F5F5] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden ${
             scrolled ? 'max-h-0 opacity-0' : 'max-h-[50px] opacity-100'
         }`} onMouseLeave={handleMouseLeave}>

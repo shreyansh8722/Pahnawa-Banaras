@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
@@ -25,12 +25,11 @@ const shippingSchema = z.object({
 });
 
 export default function CheckoutPage() {
-  const { state } = useLocation();
   const navigate = useNavigate();
-  const { clearCart } = useCart();
+  // Get cart directly from Context
+  const { cart, cartTotal, clearCart } = useCart();
   
-  const cart = state?.cart || [];
-  const originalSubtotal = state?.subtotal || 0; 
+  const originalSubtotal = cartTotal || 0; 
   
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -55,8 +54,18 @@ export default function CheckoutPage() {
 
   const finalTotal = originalSubtotal - discountAmount;
 
+  // --- FIX: USE LAYOUT EFFECT FOR INSTANT SCROLL ---
+  // This runs before the paint, ensuring the user sees the top of the page immediately.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Safety check for empty cart
   useEffect(() => {
-    if (!cart || cart.length === 0) navigate('/shop');
+    if (cart.length === 0) {
+        // You can uncomment this if you want strict redirect on empty cart
+        // navigate('/shop'); 
+    }
   }, [cart, navigate]);
 
   const handleApplyCoupon = async () => {
@@ -130,10 +139,9 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
-    const formData = getValues(); // Get validated data
+    const formData = getValues(); 
 
     try {
-      // Create simplified order object (Client-side creation for now, Cloud Function recommended for later)
       const orderData = {
         userId: auth.currentUser?.uid || 'guest',
         userEmail: formData.email,
@@ -168,7 +176,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Helper for input styles
   const inputClass = (error) => `border p-3 rounded-sm w-full text-sm outline-none focus:border-[#B08D55] transition-colors ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'}`;
 
   return (
@@ -299,7 +306,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN - SUMMARY (Kept same as before but connected to new states) */}
+          {/* RIGHT COLUMN - SUMMARY */}
           <div className="lg:col-span-5">
             <div className="bg-white p-6 shadow-sm border border-gray-100 rounded-sm sticky top-24">
               <h3 className="font-serif text-lg mb-4 pb-4 border-b border-gray-100 text-gray-900">Order Summary</h3>

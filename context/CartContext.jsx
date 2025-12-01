@@ -27,25 +27,53 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
-  // --- 1. ADD TO CART (With Unique ID Generation) ---
+  // --- HELPER: GENERATE CONSISTENT OPTION KEY ---
+  const getOptionsKey = (options) => {
+    if (!options || typeof options !== 'object') return "{}";
+
+    // 1. Filter out false, null, or undefined values
+    //    (This ensures {fall: false} matches {})
+    // 2. Sort keys alphabetically
+    //    (This ensures {a:1, b:2} matches {b:2, a:1})
+    const validOptions = Object.keys(options)
+      .filter(key => options[key]) // Only keep truthy values (true, string, numbers > 0)
+      .sort()
+      .reduce((obj, key) => {
+        obj[key] = options[key];
+        return obj;
+      }, {});
+
+    return JSON.stringify(validOptions);
+  };
+
+  // --- 1. ADD TO CART (Fixed Duplication Logic) ---
   const addToCart = (product) => {
     setCart((prevCart) => {
-      // Create a unique key based on ID + Options to find duplicates
-      const optionsKey = JSON.stringify(product.selectedOptions || {});
+      // Generate a standardized key for the incoming product's options
+      const productOptionsKey = getOptionsKey(product.selectedOptions);
+      
       const existingItemIndex = prevCart.findIndex(
-        (item) => item.id === product.id && JSON.stringify(item.selectedOptions || {}) === optionsKey
+        (item) => 
+          String(item.id) === String(product.id) && // Match ID
+          getOptionsKey(item.selectedOptions) === productOptionsKey // Match Options
       );
 
       if (existingItemIndex > -1) {
-        // Item exists with same options -> Increment Quantity
+        // EXACT SAME ITEM EXISTS -> Increment Quantity
         const newCart = [...prevCart];
         newCart[existingItemIndex].quantity += (product.quantity || 1);
+        
+        // Optional: Update price if the new one is different (rare case)
+        // newCart[existingItemIndex].price = product.price; 
+        
         return newCart;
       } else {
-        // New Item -> Add unique internal ID (_cartId) for reliable updates
+        // NEW ITEM -> Add with unique internal ID
         return [...prevCart, { 
             ...product, 
             quantity: product.quantity || 1,
+            // Ensure we store the options, defaulting to empty obj
+            selectedOptions: product.selectedOptions || {},
             _cartId: Date.now() + Math.random().toString(36).substr(2, 9) 
         }];
       }
@@ -58,13 +86,13 @@ export const CartProvider = ({ children }) => {
     setCart((prevCart) => prevCart.filter((item) => (item._cartId || item.id) !== cartId));
   };
 
-  // --- 3. UPDATE QUANTITY (Fixed Logic) ---
+  // --- 3. UPDATE QUANTITY ---
   const updateQuantity = (cartId, newQuantity) => {
     if (newQuantity < 1) return;
     
     setCart((prevCart) => 
       prevCart.map((item) => 
-        // Match by _cartId if available, fallback to id (for old items)
+        // Match by _cartId if available, fallback to id
         (item._cartId === cartId || (!item._cartId && item.id === cartId))
           ? { ...item, quantity: newQuantity } 
           : item

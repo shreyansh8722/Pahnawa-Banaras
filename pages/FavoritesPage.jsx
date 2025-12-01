@@ -8,7 +8,7 @@ import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { CartModal } from '@/components/shop/CartModal';
-import { Heart, ArrowRight, ShoppingBag, Loader2 } from 'lucide-react';
+import { Heart, ArrowRight, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 export default function FavoritesPage() {
@@ -120,9 +120,7 @@ export default function FavoritesPage() {
                     isFavorite={true} 
                     onToggleFavorite={toggleFavorite}
                   />
-                  <button onClick={() => handleAddToCart(item)} className="w-full border border-gray-200 py-2.5 md:py-3 text-[10px] font-bold uppercase tracking-widest hover:border-heritage-charcoal hover:bg-heritage-charcoal hover:text-white transition-all font-sans flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                     <ShoppingBag size={12} /> Add to Bag
-                  </button>
+                  {/* REMOVED EXTRA BUTTON HERE */}
                </div>
             ))}
           </div>

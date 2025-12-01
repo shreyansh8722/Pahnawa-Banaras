@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation(); // FIX: Added useLocation
   const { user } = useAuth();
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
@@ -38,9 +39,14 @@ export default function LoginPage() {
     setSuccessMsg(null);
   }, [mode, reset]);
 
+  // FIX: Redirect back to previous page (Checkout) if specified
   useEffect(() => {
-    if (user) navigate('/profile');
-  }, [user, navigate]);
+    if (user) {
+        // If state.from exists (passed from CartModal), go there. Else profile.
+        const from = location.state?.from || '/profile';
+        navigate(from, { replace: true });
+    }
+  }, [user, navigate, location]);
 
   const ensureUserProfile = async (firebaseUser) => {
     const userRef = doc(db, 'users', firebaseUser.uid);
