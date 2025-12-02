@@ -75,7 +75,7 @@ export const ProductManager = ({ notify }) => {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // --- UPDATED STATE FOR IMAGES ---
+  // --- IMAGES STATE ---
   const [combinedImages, setCombinedImages] = useState([]);
 
   // --- DND SENSORS ---
@@ -113,6 +113,7 @@ export const ProductManager = ({ notify }) => {
   useEffect(() => {
     setLoading(true);
     
+    // Listen to real-time updates
     const qProd = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     const unsubProd = onSnapshot(qProd, (snapshot) => {
       const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -137,7 +138,7 @@ export const ProductManager = ({ notify }) => {
     fetchCats();
 
     return () => unsubProd();
-  }, []);
+  }, [notify]); 
 
   // Filter Logic
   useEffect(() => {
@@ -153,7 +154,7 @@ export const ProductManager = ({ notify }) => {
     }
   }, [searchQuery, products]);
 
-  // --- UPDATED IMAGE SELECTION ---
+  // --- IMAGE SELECTION ---
   const handleImageSelect = (e) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -188,12 +189,19 @@ export const ProductManager = ({ notify }) => {
     if (product) {
       setEditMode(true);
       setEditId(product.id);
+      
+      // Determine correct category from either category OR subCategory field
+      // This handles the legacy "artifact" issue gracefully in the UI
+      const currentCategory = (product.category === 'artifact' && product.subCategory) 
+        ? product.subCategory 
+        : product.category;
+
       setFormData({
         name: product.name,
         sku: product.sku || '',
         price: product.price,
         comparePrice: product.comparePrice || '',
-        category: product.subCategory || product.category,
+        category: currentCategory, 
         description: product.fullDescription || '',
         stock: product.stock || 0,
         
@@ -241,6 +249,7 @@ export const ProductManager = ({ notify }) => {
     setCombinedImages([]);
   };
 
+  // --- OPTIMIZED SUBMIT HANDLER (Fixes Artifacts + Parallel Uploads) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (combinedImages.length === 0) {
@@ -252,33 +261,47 @@ export const ProductManager = ({ notify }) => {
 
     setProcessing(true);
     try {
-      let finalImageUrls = [];
-      
-      // Process images in their new order
-      for (const item of combinedImages) {
+      // 1. UPLOAD IMAGES IN PARALLEL
+      const uploadPromises = combinedImages.map(async (item) => {
         if (item.type === 'existing') {
-            finalImageUrls.push(item.url);
+          return item.url;
         } else {
-            // Upload new image
-            const compressedFile = await compressImage(item.file, 2000, 0.85); 
-            const imageRef = ref(storage, `products/${Date.now()}_${compressedFile.name}`);
-            await uploadBytes(imageRef, compressedFile);
-            const url = await getDownloadURL(imageRef);
-            finalImageUrls.push(url);
+          // Compress and Upload new image
+          const compressedFile = await compressImage(item.file, 2000, 0.85); 
+          // Create a unique filename
+          const uniqueName = `products/${Date.now()}_${Math.random().toString(36).substr(2, 5)}_${compressedFile.name}`;
+          const imageRef = ref(storage, uniqueName);
+          
+          await uploadBytes(imageRef, compressedFile);
+          return await getDownloadURL(imageRef);
         }
-      }
+      });
 
+      // Wait for all uploads to finish
+      const finalImageUrls = await Promise.all(uploadPromises);
+
+      // 2. PREPARE PRODUCT DATA
       const productData = {
         name: formData.name,
-        sku: formData.sku || `SKU-${Date.now().toString().slice(-6)}`, // Auto-gen if empty
+        sku: formData.sku || `SKU-${Date.now().toString().slice(-6)}`,
         price: parseFloat(formData.price),
         comparePrice: parseFloat(formData.comparePrice) || 0,
         stock: parseInt(formData.stock) || 0,
-        category: 'artifact', 
-        subCategory: formData.category,
-        tags_lowercase: [formData.category.toLowerCase(), formData.name.toLowerCase()],
         
-        // New Specs
+        // --- FIX: Store actual category instead of 'artifact' ---
+        category: formData.category, 
+        subCategory: formData.category, // Kept for backward compatibility
+        
+        // Better Search Tags
+        tags_lowercase: [
+            formData.category.toLowerCase(), 
+            formData.name.toLowerCase(), 
+            formData.sku.toLowerCase(),
+            formData.fabric ? formData.fabric.toLowerCase() : '',
+            formData.technique ? formData.technique.toLowerCase() : ''
+        ].filter(Boolean),
+        
+        // Luxury Specs
         technique: formData.technique,
         fabric: formData.fabric,
         warpMaterial: formData.warpMaterial,
@@ -289,12 +312,14 @@ export const ProductManager = ({ notify }) => {
         dimensions: formData.dimensions,
         care: formData.care,
 
+        // Images
         featuredImageUrl: finalImageUrls[0], // First image is featured
         imageUrls: finalImageUrls,
         fullDescription: formData.description,
         updatedAt: serverTimestamp()
       };
 
+      // 3. SAVE TO FIRESTORE
       if (editMode) {
         await updateDoc(doc(db, 'products', editId), productData);
         notify("Product updated successfully!");
@@ -379,7 +404,7 @@ export const ProductManager = ({ notify }) => {
                                     </div>
                                 </td>
                                 <td className="p-4 text-gray-600 hidden md:table-cell">
-                                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-medium">{p.subCategory}</span>
+                                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-medium">{p.category || p.subCategory}</span>
                                 </td>
                                 <td className="p-4 text-center">
                                     <span className={`font-bold text-xs px-2.5 py-1 rounded-full ${p.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
@@ -431,7 +456,7 @@ export const ProductManager = ({ notify }) => {
               <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/50">
                 <form id="product-form" onSubmit={handleSubmit} className="space-y-8">
                   
-                  {/* --- UPDATED IMAGE UPLOAD SECTION WITH DND --- */}
+                  {/* --- DRAG & DROP IMAGE UPLOAD --- */}
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                     <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Product Images (Drag to Reorder)</label>
                     
