@@ -15,7 +15,6 @@ import { Toaster } from 'react-hot-toast';
 import { WhatsAppButton } from './components/common/WhatsAppButton';
 import { NewsletterPopup } from './components/common/NewsletterPopup';
 import { CartModal } from './components/shop/CartModal'; 
-import { SeedDataButton } from './components/admin/SeedData';
 
 // --- LAZY LOAD PAGES ---
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -77,7 +76,6 @@ function App() {
                     <Route path="/returns" element={<ReturnPolicy />} />
                     <Route path="/terms" element={<TermsPage />} />
                     
-                    {/* CRITICAL FIX: Removed ProtectedRoute from Checkout and OrderSuccess */}
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/order-success" element={<OrderSuccessPage />} />
                     

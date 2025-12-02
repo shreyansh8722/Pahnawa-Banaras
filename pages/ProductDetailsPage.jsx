@@ -13,7 +13,7 @@ import { SEO } from '@/components/SEO';
 import { SizeChartModal } from '@/components/shop/SizeChartModal';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { ProductReviews } from '@/components/shop/ProductReviews';
-import { ImageZoomModal } from '@/components/shop/ImageZoomModal'; // NEW IMPORT
+import { ImageZoomModal } from '@/components/shop/ImageZoomModal';
 import { 
   ChevronDown, MessageCircle, ShieldCheck, Truck, 
   Share2, Heart, Ruler, CheckCircle2, Lock, ChevronLeft, ChevronRight, Copy, Info, Star, AlertCircle
@@ -93,7 +93,6 @@ const ProductGallery = ({ images, productName, onOpenZoom }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef(null);
 
-  // Sync scroll for mobile dots
   const handleScroll = () => {
     if (scrollRef.current) {
       const index = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
@@ -103,8 +102,7 @@ const ProductGallery = ({ images, productName, onOpenZoom }) => {
 
   return (
     <div className="flex flex-col gap-4 relative">
-      
-      {/* 1. MOBILE VIEW: Swipe Slider + Dots */}
+      {/* MOBILE VIEW */}
       <div className="lg:hidden relative">
         <div 
           ref={scrollRef}
@@ -115,14 +113,12 @@ const ProductGallery = ({ images, productName, onOpenZoom }) => {
             <div 
               key={i} 
               className="w-full flex-shrink-0 snap-center relative"
-              onClick={() => onOpenZoom(i)} // Trigger Zoom Modal
+              onClick={() => onOpenZoom(i)}
             >
               <img src={img} alt={productName} className="w-full h-full object-cover" />
             </div>
           ))}
         </div>
-        
-        {/* Dots Overlay */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
           {images.map((_, i) => (
             <div 
@@ -133,7 +129,7 @@ const ProductGallery = ({ images, productName, onOpenZoom }) => {
         </div>
       </div>
 
-      {/* 2. DESKTOP VIEW: Thumbnails + Main Image */}
+      {/* DESKTOP VIEW */}
       <div className="hidden lg:flex flex-row gap-4 items-start">
         <div className="flex flex-col gap-3 overflow-y-auto scrollbar-hide w-24 shrink-0 max-h-[600px]">
           {images.map((img, i) => (
@@ -184,7 +180,6 @@ export default function ProductDetailsPage() {
   const [activeSection, setActiveSection] = useState('care'); 
   const [pincode, setPincode] = useState('');
   
-  // New State for Zoom Modal
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0);
   
@@ -216,20 +211,33 @@ export default function ProductDetailsPage() {
     return () => unsub();
   }, [productId]);
 
+  // --- 1. SMART CATEGORY HELPER (Inserted) ---
+  const displayCategory = useMemo(() => {
+    if (!product) return 'Collection';
+    // If it's an old artifact, show subCategory (e.g., Saree) instead
+    if (product.category === 'artifact' && product.subCategory) {
+      return product.subCategory;
+    }
+    return product.category || product.subCategory || 'Collection';
+  }, [product]);
+
+  // --- 2. ROBUST RELATED PRODUCTS LOGIC (Inserted) ---
   useEffect(() => {
     if (!product) return;
     const fetchRelated = async () => {
       try {
-        const qCategory = query(
+        // Query by subCategory to ensure old and new products mix correctly
+        let targetCategory = product.subCategory || (product.category === 'artifact' ? '' : product.category);
+        
+        if (!targetCategory) return;
+
+        const q = query(
           collection(db, 'products'), 
-          where('category', '==', product.category),
+          where('subCategory', '==', targetCategory),
           limit(6) 
         );
-        let querySnapshot = await getDocs(qCategory);
-        if (querySnapshot.size <= 1) {
-           const qAll = query(collection(db, 'products'), limit(6));
-           querySnapshot = await getDocs(qAll);
-        }
+        
+        const querySnapshot = await getDocs(q);
         let related = [];
         querySnapshot.forEach((doc) => {
           if (doc.id !== product.id) {
@@ -335,11 +343,12 @@ export default function ProductDetailsPage() {
       ) : (
         <div className="pt-4 pb-24 px-4 md:px-8 lg:px-12 max-w-[1400px] mx-auto animate-fade-in">
           
+          {/* UPDATED BREADCRUMBS: Uses displayCategory */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 pb-4 border-b border-heritage-border/40 text-[10px] uppercase tracking-[0.15em] text-heritage-grey font-medium">
              <div className="flex gap-2 items-center flex-wrap">
                <Link to="/" className="hover:text-heritage-gold transition-colors">Home</Link> 
                <span className="text-heritage-border">/</span> 
-               <Link to={`/shop?cat=${product.subCategory?.toLowerCase()}`} className="hover:text-heritage-gold transition-colors">{product.subCategory}</Link>
+               <Link to={`/shop?cat=${displayCategory.toLowerCase()}`} className="hover:text-heritage-gold transition-colors">{displayCategory}</Link>
                <span className="text-heritage-border">/</span>
                <span className="text-heritage-charcoal truncate max-w-[200px]">{product.name}</span>
              </div>
@@ -351,8 +360,6 @@ export default function ProductDetailsPage() {
           </div>
 
           <main className="flex flex-col lg:flex-row gap-8 lg:gap-20 items-start">
-            
-            {/* UPDATED PRODUCT GALLERY */}
             <div className="w-full lg:w-[58%]">
                <ProductGallery 
                  images={images} 
@@ -365,7 +372,6 @@ export default function ProductDetailsPage() {
             </div>
 
             <div className="w-full lg:w-[42%] flex flex-col">
-              
               <div className="mb-6">
                  <div className="flex justify-between items-start mb-4">
                    <div className="max-w-md">
@@ -401,13 +407,11 @@ export default function ProductDetailsPage() {
                        In Stock
                      </span>
                    </div>
-                   
                    {isLowStock && (
                      <div className="flex items-center gap-2 text-orange-600 text-xs font-medium mt-1 animate-pulse">
                         <AlertCircle size={14} /> Only {product.stock} left - Order soon!
                      </div>
                    )}
-
                    <p className="text-xs text-heritage-grey mt-1">Inclusive of all taxes</p>
                    <p className="text-[10px] uppercase tracking-widest text-heritage-grey mt-2 font-medium">
                      SKU: <span className="text-heritage-charcoal">{product.sku || product.id.substring(0, 8).toUpperCase()}</span>
@@ -460,14 +464,6 @@ export default function ProductDetailsPage() {
                  </button>
               </div>
 
-              <div className="bg-gray-50/50 p-5 rounded-sm mb-12 border border-gray-200">
-                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Truck size={14}/> Check Delivery</h4>
-                 <div className="flex border-b border-gray-300 pb-2 relative">
-                   <input type="text" placeholder="Enter Pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-400 font-sans pl-1" maxLength={6} />
-                   <button className="text-[10px] font-bold text-heritage-gold uppercase tracking-widest hover:text-heritage-charcoal transition-colors absolute right-0 bottom-2">Check</button>
-                 </div>
-              </div>
-
               <div className="mb-12">
                 <Accordion title="Material & Care" isOpen={activeSection === 'care'} onClick={() => setActiveSection(activeSection === 'care' ? '' : 'care')}>
                   <div className="space-y-4">
@@ -498,22 +494,11 @@ export default function ProductDetailsPage() {
                 </Accordion>
               </div>
 
-              {/* FIX: Centered Trust Badges using Flexbox and Py-8 */}
               <div className="flex justify-around items-center border-t border-heritage-border/40 py-8 opacity-70">
-                  <div className="flex flex-col items-center gap-2">
-                     <ShieldCheck size={20} className="text-heritage-charcoal" strokeWidth={1}/>
-                     <span className="text-[9px] uppercase tracking-widest font-medium">Authentic</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                     <Truck size={20} className="text-heritage-charcoal" strokeWidth={1}/>
-                     <span className="text-[9px] uppercase tracking-widest font-medium">Global Ship</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                     <Lock size={20} className="text-heritage-charcoal" strokeWidth={1}/>
-                     <span className="text-[9px] uppercase tracking-widest font-medium">Secure</span>
-                  </div>
+                  <div className="flex flex-col items-center gap-2"><ShieldCheck size={20} className="text-heritage-charcoal" strokeWidth={1}/><span className="text-[9px] uppercase tracking-widest font-medium">Authentic</span></div>
+                  <div className="flex flex-col items-center gap-2"><Truck size={20} className="text-heritage-charcoal" strokeWidth={1}/><span className="text-[9px] uppercase tracking-widest font-medium">Global Ship</span></div>
+                  <div className="flex flex-col items-center gap-2"><Lock size={20} className="text-heritage-charcoal" strokeWidth={1}/><span className="text-[9px] uppercase tracking-widest font-medium">Secure</span></div>
               </div>
-
             </div>
           </main>
 
