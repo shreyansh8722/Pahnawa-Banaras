@@ -1,35 +1,40 @@
 import React from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 
-export const Spotlight = () => {
-  const { scrollYProgress } = useScroll();
-  const y = useTransform(scrollYProgress, [0, 1], [0, -100]);
+export const Spotlight = ({ 
+  data = {}, 
+  align = "left" 
+}) => {
+  const navigate = useNavigate();
+
+  // DEFAULTS
+  const {
+    title = "The Festive Edit",
+    subtitle = "Handpicked classics for the season of lights.",
+    buttonText = "View Collection",
+    image = "https://images.unsplash.com/photo-1610189012906-47833d772097?q=80&w=1200"
+  } = data || {};
 
   return (
-    <section className="relative h-[80vh] w-full overflow-hidden flex items-center justify-center my-12">
-      {/* Parallax Background */}
-      <motion.div 
-        style={{ y }}
-        className="absolute inset-0 z-0"
-      >
-        <img 
-          src="https://images.unsplash.com/photo-1605293266891-ed0b980604fb?q=80&w=2000" // Replace with a rich close-up of fabric
-          alt="Spotlight Background" 
-          className="w-full h-[120%] object-cover"
-        />
-        <div className="absolute inset-0 bg-black/40" />
-      </motion.div>
+    <section className="py-20 px-4 md:px-12 bg-white">
+      <div className="max-w-[1800px] mx-auto">
+        <div className={`flex flex-col md:flex-row items-center gap-12 md:gap-24 ${align === 'right' ? 'md:flex-row-reverse' : ''}`}>
+          
+          <div className="w-full md:w-3/5 h-[60vh] md:h-[80vh] relative overflow-hidden group">
+            <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"/>
+            <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+          </div>
 
-      {/* Floating Content Card */}
-      <div className="relative z-10 bg-heritage-paper/95 backdrop-blur-sm p-12 max-w-lg text-center mx-4 border border-heritage-gold/30">
-        <span className="text-heritage-gold text-[10px] uppercase tracking-[0.3em] mb-4 block">The Masterpiece Edit</span>
-        <h2 className="font-serif text-4xl md:text-5xl text-heritage-charcoal mb-6 italic">The Shikargah Collection</h2>
-        <p className="font-sans text-sm text-gray-600 leading-loose mb-8 font-light">
-          Inspired by the royal hunting grounds, these sarees feature intricate animal motifs woven in gold and silver zari. A tribute to the grandeur of a bygone era.
-        </p>
-        <button className="bg-heritage-charcoal text-white px-8 py-3 text-[10px] uppercase tracking-[0.2em] hover:bg-heritage-gold transition-colors">
-          View The Edit
-        </button>
+          <div className="w-full md:w-2/5 text-center md:text-left">
+             <span className="text-[#B08D55] text-xs font-bold uppercase tracking-[0.25em] mb-4 block">Curated Collection</span>
+             <h2 className="font-serif text-5xl md:text-6xl text-black mb-6 leading-tight">{title}</h2>
+             <p className="font-sans text-gray-500 text-lg font-light leading-relaxed mb-10 max-w-md mx-auto md:mx-0">{subtitle}</p>
+             <button onClick={() => navigate('/shop')} className="inline-flex items-center gap-3 bg-black text-white px-8 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#B08D55] transition-colors">
+               {buttonText} <ArrowRight size={16} />
+             </button>
+          </div>
+        </div>
       </div>
     </section>
   );

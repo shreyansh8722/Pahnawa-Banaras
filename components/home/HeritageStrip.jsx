@@ -1,40 +1,47 @@
 import React from 'react';
+import { Play } from 'lucide-react';
 
 export const HeritageStrip = () => {
   return (
-    <section className="py-24 bg-[#F8F5F1]"> {/* Very light beige background */}
-      <div className="max-w-[1800px] mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-        
-        {/* Left: Text Story */}
-        <div className="max-w-xl">
-           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B08D55] mb-6 block">
-             The Art of Handloom
-           </span>
-           <h2 className="font-serif text-4xl md:text-6xl text-[#1a1a1a] mb-8 leading-[1.1]">
-             100 Hours of <br/> <span className="italic text-gray-500">Patience</span>
-           </h2>
-           <p className="font-sans text-gray-600 text-lg font-light leading-relaxed mb-8">
-             A single Tilfi/Pehnawa saree passes through the hands of 12 distinct artisans. From the dyer who perfects the yarn to the weaver who spends weeks on the loom, we preserve the slow, meditative rhythm of Banaras.
-           </p>
-           <button className="text-xs font-bold uppercase tracking-[0.25em] border-b border-black pb-2 hover:text-[#B08D55] hover:border-[#B08D55] transition-colors">
-             Read The Process
-           </button>
-        </div>
+    <section className="relative w-full h-[80vh] overflow-hidden bg-gray-900">
+      {/* Background Image / Video */}
+      <img 
+        src="https://images.unsplash.com/photo-1606744888123-2479e4362143?q=80&w=2000" 
+        alt="Weaver working" 
+        className="absolute inset-0 w-full h-full object-cover opacity-60"
+      />
+      
+      {/* Gradient for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
 
-        {/* Right: The Visual (Ideally a GIF or Video Loop) */}
-        <div className="relative h-[60vh] overflow-hidden rounded-sm">
-           <img 
-             src="https://images.unsplash.com/photo-1606744888123-2479e4362143?q=80&w=1200" 
-             alt="Weaving Process"
-             className="w-full h-full object-cover hover:scale-105 transition-transform duration-[2s]" 
-           />
-           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-white border-b-[10px] border-b-transparent ml-1"></div>
-             </div>
-           </div>
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center">
+        <div className="max-w-[1800px] mx-auto px-6 md:px-20 w-full">
+            <div className="max-w-2xl border-l-2 border-[#B08D55] pl-8 md:pl-12">
+                <span className="text-[#B08D55] text-xs font-bold uppercase tracking-[0.3em] mb-4 block">
+                    Legacy of the Loom
+                </span>
+                <h2 className="font-serif text-5xl md:text-7xl text-white mb-8 leading-none">
+                    100 Hours of <br/> 
+                    <span className="italic font-light text-white/80">Devotion</span>
+                </h2>
+                <p className="font-sans text-gray-300 text-lg font-light leading-relaxed mb-10 max-w-lg">
+                    Every thread tells a story. From the dyeing of the silk to the rhythm of the handloom, we preserve a 500-year-old tradition that machines can never replicate.
+                </p>
+                
+                <div className="flex items-center gap-6">
+                    <button className="bg-white text-black px-8 py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#B08D55] hover:text-white transition-colors">
+                        Read Our Story
+                    </button>
+                    <button className="flex items-center gap-3 text-white text-[10px] font-bold uppercase tracking-[0.2em] group">
+                        <span className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                            <Play size={12} fill="currentColor" />
+                        </span>
+                        Watch Film
+                    </button>
+                </div>
+            </div>
         </div>
-
       </div>
     </section>
   );

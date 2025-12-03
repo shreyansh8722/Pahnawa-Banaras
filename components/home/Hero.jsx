@@ -1,91 +1,70 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowDown } from 'lucide-react';
-import { useSiteAssets } from '@/hooks/useSiteAssets';
+import { motion } from 'framer-motion';
+
+// --- DIRECT ASSET IMPORTS ---
+import hero1 from '../../assets/hero1.webp';
+import hero2 from '../../assets/hero2.webp';
+import hero3 from '../../assets/hero3.webp';
+
+const SLIDES = [
+  { id: 1, image: hero1 },
+  { id: 2, image: hero2 },
+  { id: 3, image: hero3 }
+];
 
 export const Hero = () => {
-  const navigate = useNavigate();
-  const { assets, getAsset } = useSiteAssets();
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Fallback images if assets aren't loaded yet
-  const slides = [
-    {
-      image: getAsset('hero_slide_1') || "https://images.unsplash.com/photo-1610189012906-47833d772097?q=80&w=2000",
-      title: "Eternal Banaras",
-      subtitle: "Authentic Handloom, Ready for You."
-    },
-    {
-      image: getAsset('hero_slide_2') || "https://images.unsplash.com/photo-1583391726247-e29237d8612f?auto=format&fit=crop&q=80",
-      title: "Bridal Heritage",
-      subtitle: "Curated Masterpieces from the Ghats."
-    }
-  ];
-
+  // Auto-Rotation Timer (7 Seconds)
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 6000);
+      setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
+    }, 7000); 
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, []);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#0a0a0a] text-white">
-      <AnimatePresence mode='wait'>
-        <motion.div
-          key={currentSlide}
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          className="absolute inset-0 z-0"
+    <div className="relative h-screen w-full overflow-hidden bg-black">
+      {/* --- BACKGROUND IMAGES --- */}
+      {SLIDES.map((slide, index) => (
+        <div
+          key={slide.id}
+          className={`absolute inset-0 transition-opacity duration-[2000ms] ease-in-out ${
+            index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+          }`}
         >
-          <img 
-            src={slides[currentSlide].image} 
-            alt="Hero" 
-            className="w-full h-full object-cover opacity-80" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
-        </motion.div>
-      </AnimatePresence>
+          {/* Ken Burns Scale Effect */}
+          <div className={`w-full h-full transform transition-transform duration-[10000ms] ease-linear ${
+             index === currentIndex ? "scale-110" : "scale-100"
+          }`}>
+             <img
+                src={slide.image}
+                alt="Hero Slide"
+                className="w-full h-full object-cover opacity-90"
+                loading={index === 0 ? "eager" : "lazy"} 
+             />
+          </div>
+          {/* Subtle Gradient just for depth (Optional - remove if you want 100% pure image) */}
+          <div className="absolute inset-0 bg-black/10" />
+        </div>
+      ))}
 
-      <div className="absolute inset-0 z-20 flex flex-col justify-end pb-32 px-6 md:px-20 max-w-[1920px] mx-auto">
-        <motion.div 
-          key={`text-${currentSlide}`}
-          initial={{ y: 40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className="max-w-4xl"
-        >
-          <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] mb-4 text-white/80 border-l-2 border-white/50 pl-4">
-            Authentic • Handpicked
-          </p>
-          <h1 className="font-serif text-5xl md:text-8xl lg:text-9xl leading-[0.9] text-white mb-8 font-light">
-            {slides[currentSlide].title}
-          </h1>
-          <p className="font-sans text-sm md:text-lg text-white/80 font-light tracking-wide mb-10 max-w-xl leading-relaxed">
-            {slides[currentSlide].subtitle}
-          </p>
-          
-          <button 
-            onClick={() => navigate('/shop')}
-            className="group flex items-center gap-4 text-xs font-bold uppercase tracking-[0.25em] hover:text-[#B08D55] transition-colors"
+      {/* --- PROGRESS BARS (Only visual element left) --- */}
+      <div className="absolute bottom-10 left-6 md:left-20 z-30 flex gap-4">
+        {SLIDES.map((_, idx) => (
+          <div 
+            key={idx} 
+            className="h-[2px] w-12 bg-white/20 overflow-hidden rounded-full cursor-pointer"
+            onClick={() => setCurrentIndex(idx)}
           >
-            Explore Collection
-            <span className="w-12 h-[1px] bg-white group-hover:bg-[#B08D55] transition-colors" />
-          </button>
-        </motion.div>
+            <div 
+              className={`h-full bg-white transition-all duration-[7000ms] linear ${
+                idx === currentIndex ? "w-full" : "w-0 opacity-0"
+              }`} 
+            />
+          </div>
+        ))}
       </div>
-
-      <motion.div 
-        animate={{ y: [0, 10, 0] }}
-        transition={{ repeat: Infinity, duration: 2 }}
-        className="absolute bottom-10 right-10 md:right-20 z-20 hidden md:flex flex-col items-center gap-4 mix-blend-difference"
-      >
-        <span className="text-[9px] uppercase tracking-widest writing-vertical-rl rotate-180 text-white">Scroll</span>
-        <ArrowDown size={20} className="text-white" strokeWidth={1} />
-      </motion.div>
     </div>
   );
 };
