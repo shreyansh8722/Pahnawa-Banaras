@@ -4,8 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   LayoutDashboard, ShoppingBag, Package, Users, 
   Settings, LogOut, Menu, X, Shield, MessageSquare, 
-  Ticket, LayoutTemplate, Globe, CheckCircle, AlertCircle,
-  Image as ImageIcon 
+  Ticket, LayoutTemplate, Globe, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,7 +19,7 @@ import { StorefrontManager } from '../components/admin/StorefrontManager';
 import { SettingsManager } from '../components/admin/SettingsManager';
 import { SubscriberManager } from '../components/admin/SubscriberManager';
 import { ContentManager } from '../components/admin/ContentManager'; 
-import { AssetManager } from '../components/admin/AssetManager';
+// REMOVED: AssetManager import (Deleted file)
 
 const ADMIN_EMAIL = "shreyanshtripathi71@gmail.com"; 
 
@@ -97,8 +96,8 @@ export default function AdminPage() {
       case 'products': return <ProductManager {...props} />;
       case 'inventory': return <InventoryManager {...props} />;
       case 'coupons': return <CouponManager {...props} />;
+      // RENAMED: 'storefront' now manages Home Page (Spotlight, Muse, Fabrics)
       case 'storefront': return <StorefrontManager {...props} />;
-      case 'assets': return <AssetManager {...props} />;
       case 'settings': return <SettingsManager {...props} />;
       case 'subscribers': return <SubscriberManager {...props} />;
       case 'messages': return <MessageInbox {...props} />;
@@ -153,8 +152,8 @@ export default function AdminPage() {
           
           <p className="px-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3 mt-8">Configuration</p>
           <NavItem id="content" icon={Menu} label="Menu Content" isActive={activeTab === 'content'} onClick={handleNavClick} />
-          <NavItem id="storefront" icon={LayoutTemplate} label="Hero Slider" isActive={activeTab === 'storefront'} onClick={handleNavClick} />
-          <NavItem id="assets" icon={ImageIcon} label="Global Assets" isActive={activeTab === 'assets'} onClick={handleNavClick} />
+          {/* UPDATED: Renamed to Home Page */}
+          <NavItem id="storefront" icon={LayoutTemplate} label="Home Page" isActive={activeTab === 'storefront'} onClick={handleNavClick} />
           <NavItem id="settings" icon={Globe} label="Settings" isActive={activeTab === 'settings'} onClick={handleNavClick} />
         </nav>
 
@@ -172,12 +171,13 @@ export default function AdminPage() {
           <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
              <div>
                <h2 className="text-3xl font-bold text-gray-900 capitalize font-serif tracking-tight">
-                   {activeTab === 'assets' ? 'Global Asset Manager' : activeTab}
+                   {/* DYNAMIC TITLE */}
+                   {activeTab === 'storefront' ? 'Home Page Editor' : activeTab}
                </h2>
                <p className="text-sm text-gray-500 mt-1">
-                 {activeTab === 'assets'
-                   ? 'Manage static site images (banners, categories, covers) from one place.'
-                   : `Manage your ${activeTab} and view performance.`}
+                 {activeTab === 'storefront' 
+                    ? 'Control the Spotlight, Fabric, and Muse sections of your homepage.'
+                    : `Manage your ${activeTab} and view performance.`}
                </p>
              </div>
              

@@ -1,20 +1,6 @@
-import { clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+// src/lib/utils.js
 
-export function cn(...inputs) {
-  return twMerge(clsx(inputs))
-}
-
-// --- NEW: Global Price Formatter ---
-export const formatPrice = (amount) => {
-  const price = Number(amount) || 0; // Force convert to Number
-  return new Intl.NumberFormat('en-IN', {
-    maximumFractionDigits: 0,
-  }).format(price);
-};
-
-// --- Image Compression Helper ---
-export const compressImage = async (file) => {
+export const compressImage = async (file, maxWidth = 1200, quality = 0.7) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -22,31 +8,58 @@ export const compressImage = async (file) => {
       const img = new Image();
       img.src = event.target.result;
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const MAX_WIDTH = 1200;
-        const scaleSize = MAX_WIDTH / img.width;
-        const width = (scaleSize < 1) ? MAX_WIDTH : img.width;
-        const height = (scaleSize < 1) ? img.height * scaleSize : img.height;
+        const elem = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
+        // Resize logic: Maintain aspect ratio
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        elem.width = width;
+        elem.height = height;
+        const ctx = elem.getContext('2d');
         
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Canvas is empty'));
-            return;
-          }
-          const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
-            type: "image/webp",
-            lastModified: Date.now(),
-          });
-          resolve(newFile);
-        }, 'image/webp', 0.75); 
+        // Better smoothing for resizing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to WebP
+        ctx.canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas is empty'));
+              return;
+            }
+            
+            // Log savings (Open your browser console to see this!)
+            const originalSize = (file.size / 1024).toFixed(2);
+            const newSize = (blob.size / 1024).toFixed(2);
+            console.log(`Compressed: ${originalSize}KB -> ${newSize}KB (Quality: ${quality})`);
+
+            const newFile = new File(
+              [blob], 
+              file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_') + ".webp", 
+              {
+                type: 'image/webp',
+                lastModified: Date.now(),
+              }
+            );
+            resolve(newFile);
+          },
+          'image/webp',
+          quality
+        );
       };
+      reader.onerror = (error) => reject(error);
     };
-    reader.onerror = (error) => reject(error);
   });
+};
+
+export const formatPrice = (price) => {
+  return new Intl.NumberFormat('en-IN').format(price);
 };
