@@ -1,47 +1,99 @@
-@import "tailwindcss";
+/* --- 1. FONTS: Editorial & Modern (User Choice) --- */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Montserrat:wght@200;300;400;500;600&family=Tenor+Sans&display=swap');
+
+@import "tailwindcss"; 
+
+@theme {
+  /* --- MINIMALIST LUXURY PALETTE --- */
+  
+  /* Backgrounds */
+  --color-heritage-paper: #FFFFFF;    /* Pure White */
+  --color-heritage-sand: #F9F9F9;     /* Ultra Light Grey (Barely there) */
+  --color-heritage-mist: #F4F4F5;     /* Zinc-100 */
+  --color-heritage-overlay: rgba(0, 0, 0, 0.03);
+
+  /* Typography & Lines */
+  --color-heritage-charcoal: #121212; /* Deepest Black */
+  --color-heritage-grey: #525252;     /* Neutral Grey */
+  --color-heritage-border: #E5E5E5;   /* Crisp Light Grey */
+  
+  /* Accents */
+  --color-heritage-gold: #BFA05F;     /* Muted Champagne Gold */
+  --color-heritage-clay: #7A7A7A;     /* Dark Grey Accent */
+  --color-heritage-pink: #D9235D;     /* Rani Pink */
+
+  /* MAPPING */
+  --color-brand-primary: var(--color-heritage-gold);
+  --color-brand-primaryDark: var(--color-heritage-clay);
+  --color-brand-secondary: var(--color-heritage-pink);
+  --color-brand-dark: var(--color-heritage-charcoal);
+  --color-brand-paper: var(--color-heritage-paper);
+  --color-brand-gray: var(--color-heritage-sand);
+
+  /* --- TYPOGRAPHY --- */
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Tenor Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  /* --- SPACING --- */
+  --tracking-tightest: -0.02em;
+  --tracking-wide: 0.05em;
+  --tracking-lux: 0.15em;     /* Reduced slightly for readability */
+  --tracking-widest: 0.2em;   /* Buttons */
+
+  /* --- ANIMATIONS --- */
+  --animate-fade-in: fadeIn 0.8s ease-out forwards;
+  --animate-slide-up: slideUp 0.8s ease-out forwards;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  html { 
+    scroll-behavior: smooth; 
+    /* FIX: Prevent horizontal scroll movement */
+    overflow-x: hidden;
+    width: 100%;
+  }
+  
+  body {
+    background-color: var(--color-heritage-paper);
+    color: var(--color-heritage-charcoal);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    /* FIX: Enforce no side-scrolling */
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+    line-height: 1.7;
+  }
+
+  /* Headings: Clean & Sharp */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    color: var(--color-heritage-charcoal);
+    letter-spacing: -0.01em;
+  }
+
+  /* Buttons: Minimalist & Larger */
+  button {
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    font-weight: 500;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+  }
+}
+
 @layer utilities {
-  html,
-body,
-#root { /* 💡 FIX: Added #root here */
-  -webkit-text-size-adjust: 100%;
-  touch-action: manipulation;
-
-  /* 💡 FIX: 
-    These two lines fix the "white flash" on page transitions 
-    and prevent any horizontal scroll.
-  */
-  background-color: #0a0a0a;
-  overflow-x: hidden;
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
-
-input,
-textarea,
-select {
-  font-size: 16px !important;
-}
-
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}
-
-
-/* Your existing scrollbar utils (Unchanged) */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
