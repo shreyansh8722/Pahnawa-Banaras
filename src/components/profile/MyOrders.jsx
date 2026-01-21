@@ -1,219 +1,139 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, writeBatch, increment } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Package, Clock, CheckCircle2, XCircle, Truck, ExternalLink, RefreshCw } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader2, PackageX, ChevronRight, Clock, CheckCircle, Truck, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-export function MyOrders({ userId }) {
-  const navigate = useNavigate();
+export const MyOrders = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- FETCH ORDERS ---
   useEffect(() => {
-    if (!userId) { setLoading(false); return; }
+    if (!user) return;
 
-    const q = query(
-      collection(db, 'orders'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
+    const fetchOrders = async () => {
+      try {
+        const q = query(
+          collection(db, 'orders'),
+          where('userId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-royal-gold gap-3">
+         <Loader2 className="animate-spin" size={32} />
+         <span className="text-[10px] uppercase tracking-widest">Loading Records...</span>
+      </div>
     );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-         id: doc.id,
-         ...doc.data(),
-         createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date()
-      }));
-      setOrders(ordersData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
-
-  // --- ACTIONS ---
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm("Are you sure you want to cancel this order?")) return;
-    
-    try {
-      // 1. Get order details to know what to restock
-      const orderRef = doc(db, 'orders', orderId);
-      const orderSnap = await getDoc(orderRef);
-      
-      if (!orderSnap.exists()) {
-        toast.error("Order not found");
-        return;
-      }
-
-      const orderData = orderSnap.data();
-      const batch = writeBatch(db);
-
-      // 2. Update Order Status
-      batch.update(orderRef, {
-        status: 'Cancelled',
-        cancelledAt: new Date()
-      });
-
-      // 3. Restore Stock for each item
-      if (orderData.items && Array.isArray(orderData.items)) {
-        orderData.items.forEach(item => {
-            const productRef = doc(db, 'products', item.id);
-            batch.update(productRef, { 
-                stock: increment(item.quantity) 
-            });
-        });
-      }
-
-      await batch.commit();
-      toast.success("Order cancelled and stock restored");
-      
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to cancel. Please contact support.");
-    }
-  };
-
-  const handleExchange = (orderId) => {
-    const msg = `Hi Pahnawa Team, I would like to exchange/return items from Order ID: ${orderId}`;
-    window.open(`https://wa.me/919305491919?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  // --- STATUS BADGE HELPER ---
-  const getStatusInfo = (status) => {
-    const s = (status || 'processing').toLowerCase();
-    if (s.includes('deliver')) return { color: 'text-emerald-600', bg: 'bg-emerald-50', icon: CheckCircle2, label: 'Delivered' };
-    if (s.includes('ship') || s.includes('dispatch')) return { color: 'text-blue-600', bg: 'bg-blue-50', icon: Truck, label: 'In Transit' };
-    if (s.includes('cancel')) return { color: 'text-red-600', bg: 'bg-red-50', icon: XCircle, label: 'Cancelled' };
-    return { color: 'text-amber-600', bg: 'bg-amber-50', icon: Clock, label: 'Processing' };
-  };
-
-  if (loading) return <div className="text-center py-20 text-xs uppercase tracking-widest text-stone-400">Loading your collection...</div>;
+  }
 
   if (orders.length === 0) {
     return (
-      <div className="text-center py-20 border border-dashed border-stone-200 bg-stone-50/50">
-        <Package size={40} strokeWidth={1} className="text-stone-300 mx-auto mb-4" />
-        <h3 className="text-lg font-serif text-stone-900 mb-2 italic">No Orders Yet</h3>
-        <button 
-          onClick={() => navigate('/shop')}
-          className="mt-4 text-xs font-bold uppercase tracking-widest text-heritage-gold border-b border-heritage-gold pb-1 hover:text-heritage-charcoal hover:border-heritage-charcoal transition-all"
-        >
-          Explore Collection
-        </button>
+      <div className="flex flex-col items-center justify-center py-16 border border-royal-border/60 rounded-sm bg-white text-center">
+         <div className="w-16 h-16 rounded-full bg-royal-sand flex items-center justify-center mb-4">
+            <PackageX size={32} className="text-royal-grey" strokeWidth={1.5} />
+         </div>
+         <h3 className="font-serif text-2xl text-royal-charcoal mb-2">No Past Orders</h3>
+         <p className="text-sm text-royal-grey mb-8 max-w-md font-light">Your wardrobe is waiting for its first royal addition.</p>
+         <Link to="/shop" className="bg-royal-maroon text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-royal-charcoal transition-colors shadow-lg">
+            Start Shopping
+         </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {orders.map((order) => {
-        const { color, bg, icon: StatusIcon, label } = getStatusInfo(order.status);
-        const canCancel = ['Processing', 'Pending'].includes(order.status || 'Processing');
-        const isDelivered = (order.status || '').toLowerCase().includes('delivered');
-
-        return (
-          <div key={order.id} className="group bg-white border border-stone-200 rounded-sm hover:border-heritage-gold/30 transition-all duration-500 overflow-hidden">
-            
-            {/* HEADER */}
-            <div className="px-6 py-4 bg-stone-50/50 border-b border-stone-100 flex flex-wrap gap-4 justify-between items-center">
-              <div className="flex gap-6 text-xs text-stone-500">
-                <div>
-                  <span className="block uppercase tracking-widest text-[9px] text-stone-400 mb-1">Order Placed</span>
-                  <span className="font-medium text-stone-900">{order.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                </div>
-                <div>
-                  <span className="block uppercase tracking-widest text-[9px] text-stone-400 mb-1">Total</span>
-                  <span className="font-medium text-stone-900">₹{formatPrice(order.totalAmount || order.total)}</span>
-                </div>
-                <div>
-                  <span className="block uppercase tracking-widest text-[9px] text-stone-400 mb-1">Order ID</span>
-                  <span className="font-medium text-stone-900">#{order.id.slice(-8).toUpperCase()}</span>
-                </div>
+    <div className="space-y-6">
+      {orders.map((order) => (
+        <div key={order.id} className="bg-white border border-royal-border rounded-sm overflow-hidden hover:shadow-lg hover:border-royal-gold/30 transition-all duration-300">
+           
+           {/* ORDER HEADER */}
+           <div className="bg-royal-sand/30 px-6 py-4 flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-royal-border/50">
+              <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                 <div>
+                    <span className="block text-[10px] uppercase tracking-widest text-royal-grey mb-0.5">Order ID</span>
+                    <span className="font-mono text-xs text-royal-charcoal font-bold">#{order.id.slice(0, 8).toUpperCase()}</span>
+                 </div>
+                 <div>
+                    <span className="block text-[10px] uppercase tracking-widest text-royal-grey mb-0.5">Date</span>
+                    <span className="font-serif text-royal-charcoal">
+                       {order.createdAt?.seconds ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}
+                    </span>
+                 </div>
+                 <div>
+                    <span className="block text-[10px] uppercase tracking-widest text-royal-grey mb-0.5">Total</span>
+                    <span className="font-serif text-royal-charcoal font-bold">₹{order.total?.toLocaleString()}</span>
+                 </div>
               </div>
               
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${bg} ${color}`}>
-                <StatusIcon size={12} /> {label}
+              <div className="flex items-center gap-2">
+                 <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm flex items-center gap-1.5 border ${
+                    order.status === 'delivered' ? 'bg-green-50 text-green-800 border-green-200' : 
+                    order.status === 'shipped' ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                    'bg-yellow-50 text-yellow-800 border-yellow-200'
+                 }`}>
+                    {order.status === 'delivered' ? <CheckCircle size={12}/> : 
+                     order.status === 'shipped' ? <Truck size={12}/> : 
+                     <Clock size={12}/>}
+                    {order.status || 'Processing'}
+                 </span>
               </div>
-            </div>
+           </div>
 
-            {/* BODY */}
-            <div className="p-6">
-              <div className="flex flex-col gap-6">
-                {order.items?.map((item, idx) => (
-                  <div key={idx} className="flex gap-6 items-start">
-                    <div className="w-20 h-24 bg-stone-100 border border-stone-200 shrink-0">
-                      <img 
-                        src={item.featuredImageUrl || item.image || '/placeholder.jpg'} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover mix-blend-multiply" 
-                      />
+           {/* ORDER ITEMS */}
+           <div className="p-6">
+              {order.items?.map((item, idx) => (
+                 <div key={idx} className="flex gap-4 mb-6 last:mb-0 items-center">
+                    <div className="w-16 h-20 bg-royal-sand shrink-0 border border-royal-border rounded-sm overflow-hidden relative">
+                       <img src={item.image || item.images?.[0] || item.featuredImageUrl} alt={item.name} className="w-full h-full object-cover" />
+                       <span className="absolute bottom-0 right-0 bg-royal-charcoal text-white text-[9px] font-bold px-1.5 py-0.5">x{item.quantity}</span>
                     </div>
-                    <div className="flex-1 pt-1">
-                      <h4 className="font-serif text-lg text-heritage-charcoal leading-tight mb-2">
-                        <span onClick={() => navigate(`/product/${item.id}`)} className="cursor-pointer hover:text-heritage-gold transition-colors">
-                          {item.name}
-                        </span>
-                      </h4>
-                      <p className="text-xs text-stone-500 font-sans mb-1">
-                        Size: <span className="text-stone-800">{item.selectedSize || 'Standard'}</span> 
-                        <span className="mx-2 text-stone-300">|</span> 
-                        Qty: {item.quantity}
-                      </p>
-                      <p className="text-sm font-medium text-heritage-charcoal">₹{formatPrice(item.price)}</p>
+                    
+                    <div className="flex-1 min-w-0">
+                       <h4 className="font-serif text-lg text-royal-charcoal leading-tight mb-1 truncate">
+                          <Link to={`/product/${item.id}`} className="hover:text-royal-maroon transition-colors">{item.name}</Link>
+                       </h4>
+                       <p className="text-xs text-royal-gold font-bold">₹{item.price?.toLocaleString()}</p>
+                       {item.selectedOptions && Object.values(item.selectedOptions).some(Boolean) && (
+                          <span className="inline-block mt-1 text-[9px] bg-royal-sand px-2 py-0.5 text-royal-grey rounded-sm">
+                             Customized
+                          </span>
+                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                    
+                    <Link 
+                        to={`/product/${item.id}`} 
+                        className="hidden md:flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-royal-grey hover:text-royal-maroon border border-royal-border px-3 py-1.5 rounded-sm hover:border-royal-maroon transition-colors"
+                    >
+                       View Item
+                    </Link>
+                 </div>
+              ))}
+           </div>
 
-              {/* FOOTER ACTIONS */}
-              <div className="mt-8 pt-6 border-t border-stone-100 flex flex-wrap gap-4 justify-end">
-                
-                {/* 1. Track Order */}
-                {!label.includes('Cancelled') && (
-                  <button 
-                    onClick={() => navigate('/track-order', { state: { orderId: order.id } })}
-                    className="flex items-center gap-2 px-5 py-2.5 border border-stone-200 text-stone-600 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-stone-50 hover:text-stone-900 transition-colors"
-                  >
-                    <Truck size={14} /> Track Order
-                  </button>
-                )}
+           {/* ORDER ACTIONS */}
+           <div className="px-6 py-3 bg-royal-cream border-t border-royal-border/50 flex justify-end gap-3">
+              <button className="text-[10px] font-bold uppercase tracking-widest text-royal-charcoal hover:text-royal-gold transition-colors flex items-center gap-1">
+                 <AlertCircle size={14} /> Need Help?
+              </button>
+           </div>
 
-                {/* 2. Cancel Order */}
-                {canCancel && (
-                  <button 
-                    onClick={() => handleCancelOrder(order.id)}
-                    className="flex items-center gap-2 px-5 py-2.5 border border-red-100 text-red-600 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-red-50 transition-colors"
-                  >
-                    <XCircle size={14} /> Cancel Order
-                  </button>
-                )}
-
-                {/* 3. Exchange/Return */}
-                {isDelivered && (
-                  <button 
-                    onClick={() => handleExchange(order.id)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-heritage-gold border border-transparent transition-colors shadow-sm"
-                  >
-                    <RefreshCw size={14} /> Exchange / Return
-                  </button>
-                )}
-
-                {/* 4. Need Help */}
-                <button 
-                  onClick={() => handleExchange(order.id)} 
-                  className="flex items-center gap-2 px-5 py-2.5 text-stone-400 hover:text-stone-600 text-[10px] font-bold uppercase tracking-[0.15em] transition-colors"
-                >
-                  Need Help?
-                </button>
-
-              </div>
-            </div>
-          </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
-}
+};

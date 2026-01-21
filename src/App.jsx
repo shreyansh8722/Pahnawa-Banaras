@@ -9,12 +9,13 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { ScrollToTop } from './components/utils/ScrollToTop';
 import { AnalyticsTracker } from './components/utils/AnalyticsTracker';
 import { HelmetProvider } from 'react-helmet-async';
-import { Toaster } from 'react-hot-toast';
+
+// --- LAYOUT ---
+import { Layout } from './components/layout/Layout'; // Make sure this path is correct
 
 // --- COMPONENTS ---
 import { WhatsAppButton } from './components/common/WhatsAppButton';
 import { NewsletterPopup } from './components/common/NewsletterPopup';
-import { CartModal } from './components/shop/CartModal'; 
 
 // --- LAZY LOAD PAGES ---
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -42,50 +43,56 @@ function App() {
       <Router>
         <AnalyticsTracker />
         <ScrollToTop />
-        <Toaster 
-          position="bottom-center"
-          toastOptions={{
-            style: {
-              background: '#333', color: '#fff', fontSize: '12px',
-              borderRadius: '2px', padding: '12px 24px',
-              textTransform: 'uppercase', letterSpacing: '1px',
-            },
-            success: { iconTheme: { primary: '#B08D55', secondary: '#fff' } }
-          }}
-        />
-
+        
         <AuthProvider>
           <LoginModalProvider>
             <CartProvider>
               <ProductProvider>
                 <Suspense fallback={<AppSkeleton />}>
-                  <NewsletterPopup />
-                  <CartModal /> 
                   
+                  {/* Global Popups */}
+                  <NewsletterPopup />
+                  <WhatsAppButton />
+
                   <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/shop" element={<ShopPage />} />
-                    <Route path="/product/:productId" element={<ProductDetailsPage />} />
-                    <Route path="/search" element={<SearchPage />} />
+                    {/* --- MAIN LAYOUT ROUTES --- */}
+                    {/* All pages inside here will automatically get the Navbar and Footer */}
+                    <Route element={<Layout />}>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/shop" element={<ShopPage />} />
+                      
+                      {/* FIX: Ensure param matches the one used in ProductDetailsPage (productId vs id) */}
+                      <Route path="/product/:id" element={<ProductDetailsPage />} />
+                      <Route path="/product/:productId" element={<ProductDetailsPage />} /> 
+                      
+                      <Route path="/search" element={<SearchPage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/faq" element={<FAQPage />} />
+                      <Route path="/track-order" element={<TrackOrderPage />} />
+                      <Route path="/privacy" element={<PrivacyPolicy />} />
+                      <Route path="/returns" element={<ReturnPolicy />} />
+                      <Route path="/terms" element={<TermsPage />} />
+                      
+                      <Route path="/checkout" element={<CheckoutPage />} />
+                      <Route path="/order-success" element={<OrderSuccessPage />} />
+                      
+                      {/* Protected Routes */}
+                      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                      <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
+                    </Route>
+
+                    {/* --- STANDALONE ROUTES --- */}
+                    {/* Login usually looks better without the main navbar */}
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/faq" element={<FAQPage />} />
-                    <Route path="/track-order" element={<TrackOrderPage />} />
-                    <Route path="/privacy" element={<PrivacyPolicy />} />
-                    <Route path="/returns" element={<ReturnPolicy />} />
-                    <Route path="/terms" element={<TermsPage />} />
                     
-                    <Route path="/checkout" element={<CheckoutPage />} />
-                    <Route path="/order-success" element={<OrderSuccessPage />} />
-                    
-                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                    <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
+                    {/* Admin usually has its own layout, but keeping here for now */}
                     <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminPage /></ProtectedRoute>} />
+                    
+                    {/* 404 */}
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
 
-                  <WhatsAppButton />
                 </Suspense>
               </ProductProvider>
             </CartProvider>

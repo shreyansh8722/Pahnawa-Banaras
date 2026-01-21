@@ -1,39 +1,70 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
-export const Spotlight = ({ 
-  data = {}, 
-  align = "left" 
-}) => {
-  const navigate = useNavigate();
-
-  // DEFAULTS
-  const {
-    title = "The Festive Edit",
-    subtitle = "Handpicked classics for the season of lights.",
-    buttonText = "View Collection",
-    image = "https://images.unsplash.com/photo-1610189012906-47833d772097?q=80&w=1200"
-  } = data || {};
+export const Spotlight = ({ data }) => {
+  if (!data || data.length === 0) return null;
+  const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <section className="py-20 px-4 md:px-12 bg-white">
-      <div className="max-w-[1800px] mx-auto">
-        <div className={`flex flex-col md:flex-row items-center gap-12 md:gap-24 ${align === 'right' ? 'md:flex-row-reverse' : ''}`}>
+    <section className="py-24 bg-royal-cream">
+      <div className="container mx-auto px-6 md:px-12">
+        <div className="flex flex-col md:flex-row gap-12 items-center">
           
-          <div className="w-full md:w-3/5 h-[60vh] md:h-[80vh] relative overflow-hidden group">
-            <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"/>
-            <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+          {/* Text Content */}
+          <div className="w-full md:w-1/3 space-y-8">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-royal-grey">In The Spotlight</span>
+            <h2 className="font-display text-4xl text-royal-charcoal">Curated Selections</h2>
+            
+            {/* Tabs */}
+            <div className="space-y-4 border-l border-royal-border/50">
+              {data.map((item, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveTab(index)}
+                  className={`block w-full text-left text-xl font-serif py-2 px-6 transition-all duration-300 ${
+                    activeTab === index 
+                      ? 'text-royal-maroon italic scale-105 origin-left font-medium border-l-2 border-royal-maroon -ml-[2px]' 
+                      : 'text-royal-grey/60 hover:text-royal-charcoal'
+                  }`}
+                >
+                  {item.title}
+                </button>
+              ))}
+            </div>
+
+            <Link 
+                to={data[activeTab]?.link || '/shop'} 
+                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-royal-gold hover:text-royal-maroon transition-colors duration-200 mt-4"
+            >
+              Explore Collection <ArrowRight size={16} />
+            </Link>
           </div>
 
-          <div className="w-full md:w-2/5 text-center md:text-left">
-             <span className="text-[#B08D55] text-xs font-bold uppercase tracking-[0.25em] mb-4 block">Curated Collection</span>
-             <h2 className="font-serif text-5xl md:text-6xl text-black mb-6 leading-tight">{title}</h2>
-             <p className="font-sans text-gray-500 text-lg font-light leading-relaxed mb-10 max-w-md mx-auto md:mx-0">{subtitle}</p>
-             <button onClick={() => navigate('/shop')} className="inline-flex items-center gap-3 bg-black text-white px-8 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#B08D55] transition-colors">
-               {buttonText} <ArrowRight size={16} />
-             </button>
+          {/* Image Display */}
+          <div className="w-full md:w-2/3 h-[500px] relative overflow-hidden bg-royal-sand border border-royal-gold/20 rounded-sm">
+            <AnimatePresence mode='wait'>
+              <motion.img
+                key={activeTab}
+                src={data[activeTab]?.image}
+                alt={data[activeTab]?.title}
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </AnimatePresence>
+            
+            <div className="absolute bottom-0 left-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent w-full">
+                 <h3 className="text-white font-serif text-2xl mb-2">{data[activeTab]?.title}</h3>
+                 <p className="text-white/90 font-sans font-light text-sm max-w-md leading-relaxed">
+                    {data[activeTab]?.description}
+                 </p>
+            </div>
           </div>
+
         </div>
       </div>
     </section>

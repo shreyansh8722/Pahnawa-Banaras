@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 
 // --- DIRECT ASSET IMPORTS ---
 import hero1 from '../../assets/hero1.webp';
@@ -24,17 +23,19 @@ export const Hero = () => {
   }, []);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-black">
+    // OPTIMIZATION: Reduced height to 50vh (mobile) and 75vh (desktop)
+    <div className="relative h-[50vh] md:h-[75vh] w-full overflow-hidden bg-royal-charcoal transition-all duration-500">
+      
       {/* --- BACKGROUND IMAGES --- */}
       {SLIDES.map((slide, index) => (
         <div
           key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-[2000ms] ease-in-out ${
+          className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${
             index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}
         >
           {/* Ken Burns Scale Effect */}
-          <div className={`w-full h-full transform transition-transform duration-[10000ms] ease-linear ${
+          <div className={`w-full h-full transform will-change-transform transition-transform duration-[10000ms] ease-linear ${
              index === currentIndex ? "scale-110" : "scale-100"
           }`}>
              <img
@@ -42,23 +43,24 @@ export const Hero = () => {
                 alt="Hero Slide"
                 className="w-full h-full object-cover opacity-90"
                 loading={index === 0 ? "eager" : "lazy"} 
+                decoding="async"
              />
           </div>
-          {/* Subtle Gradient just for depth (Optional - remove if you want 100% pure image) */}
-          <div className="absolute inset-0 bg-black/10" />
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
         </div>
       ))}
 
-      {/* --- PROGRESS BARS (Only visual element left) --- */}
-      <div className="absolute bottom-10 left-6 md:left-20 z-30 flex gap-4">
+      {/* --- PROGRESS BARS --- */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:left-12 md:translate-x-0 z-30 flex gap-3">
         {SLIDES.map((_, idx) => (
           <div 
             key={idx} 
-            className="h-[2px] w-12 bg-white/20 overflow-hidden rounded-full cursor-pointer"
+            className="h-[3px] w-8 md:w-12 bg-white/30 overflow-hidden rounded-full cursor-pointer backdrop-blur-sm transition-all hover:bg-white/50"
             onClick={() => setCurrentIndex(idx)}
           >
             <div 
-              className={`h-full bg-white transition-all duration-[7000ms] linear ${
+              className={`h-full bg-royal-gold transition-all duration-[7000ms] ease-linear ${
                 idx === currentIndex ? "w-full" : "w-0 opacity-0"
               }`} 
             />

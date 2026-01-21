@@ -1,49 +1,42 @@
-/* --- 1. FONTS: Editorial & Modern (User Choice) --- */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Montserrat:wght@200;300;400;500;600&family=Tenor+Sans&display=swap');
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Montserrat:wght@200;300;400;500;600&display=swap');
 
-@import "tailwindcss"; 
+@import "tailwindcss";
 
 @theme {
-  /* --- MINIMALIST LUXURY PALETTE --- */
+  /* --- PAHNAWA ROYAL PALETTE (Derived from Logo) --- */
   
   /* Backgrounds */
-  --color-heritage-paper: #FFFFFF;    /* Pure White */
-  --color-heritage-sand: #F9F9F9;     /* Ultra Light Grey (Barely there) */
-  --color-heritage-mist: #F4F4F5;     /* Zinc-100 */
-  --color-heritage-overlay: rgba(0, 0, 0, 0.03);
-
-  /* Typography & Lines */
-  --color-heritage-charcoal: #121212; /* Deepest Black */
-  --color-heritage-grey: #525252;     /* Neutral Grey */
-  --color-heritage-border: #E5E5E5;   /* Crisp Light Grey */
+  --color-royal-cream: #FDFBF7;      /* Main Canvas (Skin tone/Walls) */
+  --color-royal-sand: #F4F1EA;       /* Secondary Background */
+  --color-royal-teal: #2F4F4F;       /* Contrast Background (Jade/Teal Wall) */
   
   /* Accents */
-  --color-heritage-gold: #BFA05F;     /* Muted Champagne Gold */
-  --color-heritage-clay: #7A7A7A;     /* Dark Grey Accent */
-  --color-heritage-pink: #D9235D;     /* Rani Pink */
-
-  /* MAPPING */
-  --color-brand-primary: var(--color-heritage-gold);
-  --color-brand-primaryDark: var(--color-heritage-clay);
-  --color-brand-secondary: var(--color-heritage-pink);
-  --color-brand-dark: var(--color-heritage-charcoal);
-  --color-brand-paper: var(--color-heritage-paper);
-  --color-brand-gray: var(--color-heritage-sand);
-
-  /* --- TYPOGRAPHY --- */
-  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
-  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Tenor Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-royal-maroon: #701a1a;     /* Primary CTA (Saree Border/Blouse) */
+  --color-royal-maroon-dark: #4a0f0f; /* Hover State */
+  --color-royal-gold: #C5A059;       /* Luxury Elements (Jewelry/Saree Body) */
+  --color-royal-gold-light: #E5C585; /* Gold Highlights */
   
-  /* --- SPACING --- */
-  --tracking-tightest: -0.02em;
-  --tracking-wide: 0.05em;
-  --tracking-lux: 0.15em;     /* Reduced slightly for readability */
-  --tracking-widest: 0.2em;   /* Buttons */
+  /* Typography */
+  --color-royal-charcoal: #2D2424;   /* Main Text (Deep Sepia) */
+  --color-royal-grey: #6B6060;       /* Secondary Text */
+  --color-royal-border: #E6DCCA;     /* Borders */
+
+  /* MAPPING TO GENERIC NAMES FOR COMPATIBILITY */
+  --color-brand-primary: var(--color-royal-maroon);
+  --color-brand-secondary: var(--color-royal-gold);
+  --color-brand-dark: var(--color-royal-charcoal);
+  --color-brand-paper: var(--color-royal-cream);
+  
+  /* --- TYPOGRAPHY --- */
+  --font-serif: "Cormorant Garamond", serif;
+  --font-display: "Cinzel Decorative", serif; /* For grand headings */
+  --font-sans: "Montserrat", sans-serif;
 
   /* --- ANIMATIONS --- */
   --animate-fade-in: fadeIn 0.8s ease-out forwards;
   --animate-slide-up: slideUp 0.8s ease-out forwards;
+  --animate-slow-spin: spin 3s linear infinite;
 
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -56,44 +49,40 @@
 }
 
 @layer base {
-  html { 
-    scroll-behavior: smooth; 
-    /* FIX: Prevent horizontal scroll movement */
-    overflow-x: hidden;
-    width: 100%;
-  }
-  
   body {
-    background-color: var(--color-heritage-paper);
-    color: var(--color-heritage-charcoal);
+    background-color: var(--color-royal-cream);
+    color: var(--color-royal-charcoal);
     font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    /* FIX: Enforce no side-scrolling */
+    line-height: 1.6;
     overflow-x: hidden;
-    position: relative;
-    width: 100%;
-    line-height: 1.7;
   }
 
-  /* Headings: Clean & Sharp */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-serif);
-    font-weight: 400;
-    color: var(--color-heritage-charcoal);
-    letter-spacing: -0.01em;
+    color: var(--color-royal-charcoal);
   }
 
-  /* Buttons: Minimalist & Larger */
+  /* The "Arch" Heading Style */
+  .heading-display {
+    font-family: var(--font-display);
+    color: var(--color-royal-maroon);
+  }
+
   button {
-    letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
-    font-weight: 500;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
+    letter-spacing: 0.1em;
   }
 }
 
-@layer utilities {
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
-  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+@layer components {
+  /* Custom Scrollbar for a premium feel */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-royal-cream);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-royal-gold);
+    border-radius: 3px;
+  }
 }

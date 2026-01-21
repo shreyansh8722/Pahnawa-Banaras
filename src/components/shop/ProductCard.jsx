@@ -1,73 +1,105 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { formatPrice } from '@/lib/utils';
-import { LazyImage } from '@/components/LazyImage';
-import { useCart } from '@/context/CartContext';
-import { ShoppingBag } from 'lucide-react';
+import { Heart, Eye } from 'lucide-react';
+import { QuickViewModal } from './QuickViewModal';
+import { Link } from 'react-router-dom';
 
-export const ProductCard = ({ item }) => {
-  const navigate = useNavigate();
-  const { addToCart } = useCart();
+export const ProductCard = ({ item, onAddToCart, isFavorite, onToggleFavorite }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
 
-  const handleAddToCart = (e) => {
-    e.stopPropagation();
-    addToCart({ ...item, quantity: 1 });
-  };
+  if (!item) return null;
+
+  // --- FIX: Mapping to your Database Fields ---
+  // Priority: 1. featuredImageUrl -> 2. imageUrls[0] -> 3. image (fallback)
+  const mainImage = item.featuredImageUrl || (item.imageUrls && item.imageUrls[0]) || item.image || "";
+  
+  // Secondary image for hover effect
+  const hoverImage = (item.imageUrls && item.imageUrls.length > 1) ? item.imageUrls[1] : null;
 
   return (
-    <div 
-      className="group cursor-pointer flex flex-col space-y-4"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={() => navigate(`/product/${item.id}`)}
-    >
-      {/* IMAGE CONTAINER - Aspect Ratio 3:4 (Editorial Standard) */}
-      <div className="relative w-full aspect-[3/4] overflow-hidden bg-gray-50">
-        
-        {/* Primary Image */}
-        <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
-           <LazyImage src={item.featuredImageUrl} alt={item.name} className="w-full h-full object-cover" />
-        </div>
-        
-        {/* Secondary (Hover) Image - Gentle Zoom */}
-        <div className={`absolute inset-0 transition-all duration-1000 ease-out ${isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}>
-           <LazyImage src={item.imageUrls?.[1] || item.featuredImageUrl} alt={item.name} className="w-full h-full object-cover" />
-        </div>
+    <>
+      <div 
+        className="group relative flex flex-col w-full"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* IMAGE CONTAINER */}
+        <Link to={`/product/${item.id}`} className="relative aspect-[3/4] w-full overflow-hidden bg-royal-sand mb-4 block">
+          {mainImage ? (
+            <img 
+              src={mainImage} 
+              alt={item.name || "Product"}
+              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              onError={(e) => {
+                e.target.onerror = null; 
+                e.target.style.display = 'none'; // Hide if broken
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-royal-grey bg-royal-border/20 text-xs uppercase tracking-widest">
+               No Image
+            </div>
+          )}
+          
+          {/* HOVER IMAGE */}
+          {hoverImage && (
+             <img 
+               src={hoverImage} 
+               alt={item.name}
+               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+             />
+          )}
 
-        {/* --- NEW: FLOATING 'ADD TO BAG' BUTTON --- */}
-        {/* Floats above the bottom edge, centered, minimalist white/black style */}
-        <button
-          onClick={handleAddToCart}
-          className={`
-            absolute bottom-6 left-1/2 -translate-x-1/2 
-            bg-white text-heritage-charcoal 
-            py-3 px-8 
-            text-[10px] font-bold uppercase tracking-[0.2em] font-sans
-            border border-transparent shadow-xl
-            hover:bg-heritage-charcoal hover:text-white hover:border-heritage-charcoal
-            transition-all duration-500 ease-out
-            flex items-center gap-3 whitespace-nowrap
-            ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
-          `}
-        >
-           <ShoppingBag size={12} strokeWidth={1.5} className="mb-[1px]" />
-           Add to Bag
-        </button>
+          {/* OVERLAY BUTTONS */}
+          <div className={`absolute inset-x-0 bottom-4 flex justify-center gap-2 px-4 transition-all duration-300 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+             <button 
+                onClick={(e) => { e.preventDefault(); setShowQuickView(true); }}
+                className="bg-white text-royal-charcoal p-3 hover:bg-royal-gold hover:text-white transition-colors duration-200 shadow-lg rounded-sm"
+                title="Quick View"
+             >
+                <Eye size={18} />
+             </button>
+
+             <button 
+                onClick={(e) => { e.preventDefault(); onAddToCart && onAddToCart(item); }}
+                className="flex-1 bg-royal-maroon text-white h-[42px] flex items-center justify-center text-[10px] font-bold uppercase tracking-widest hover:bg-royal-charcoal transition-colors duration-200 shadow-lg"
+             >
+                Add to Cart
+             </button>
+          </div>
+
+          {/* WISHLIST BUTTON */}
+          <button 
+            onClick={(e) => { e.preventDefault(); onToggleFavorite && onToggleFavorite(item.id); }}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white text-royal-maroon transition-all duration-200 z-20 shadow-sm"
+          >
+            <Heart size={18} className={isFavorite ? "fill-royal-maroon" : ""} strokeWidth={1.5} />
+          </button>
+        </Link>
+
+        {/* DETAILS */}
+        <div className="text-center space-y-1">
+          <Link to={`/product/${item.id}`}>
+            <h3 className="font-serif text-lg text-royal-charcoal group-hover:text-royal-maroon transition-colors duration-200 line-clamp-1">
+              {item.name || "Unnamed Product"}
+            </h3>
+          </Link>
+          <p className="text-[10px] font-sans text-royal-grey uppercase tracking-widest">{item.category || "General"}</p>
+          <div className="flex justify-center gap-2 items-center text-royal-gold font-medium mt-1">
+             <span>₹{item.price ? item.price.toLocaleString() : "0"}</span>
+             {item.originalPrice && (
+               <span className="text-xs text-royal-border line-through">₹{item.originalPrice.toLocaleString()}</span>
+             )}
+          </div>
+        </div>
       </div>
 
-      {/* METADATA - Clean & Centered */}
-      <div className="text-center space-y-2">
-        <h3 className="font-serif text-lg md:text-xl text-heritage-charcoal tracking-tight group-hover:text-heritage-gold transition-colors duration-300">
-          {item.name}
-        </h3>
-        
-        <div className="flex justify-center items-center gap-3 text-xs font-sans tracking-wide text-gray-500">
-           <span className="uppercase font-medium">{item.subCategory}</span>
-           <span className="w-0.5 h-3 bg-gray-300"></span>
-           <span className="font-semibold text-heritage-charcoal">₹{formatPrice(item.price)}</span>
-        </div>
-      </div>
-    </div>
+      <QuickViewModal 
+        item={item} 
+        isOpen={showQuickView} 
+        onClose={() => setShowQuickView(false)} 
+        onAddToCart={onAddToCart}
+      />
+    </>
   );
 };

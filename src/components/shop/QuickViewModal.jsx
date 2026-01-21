@@ -1,94 +1,54 @@
-import React, { useState } from 'react';
-import { X, ShoppingBag, Check } from 'lucide-react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCart } from '@/context/CartContext';
-import { formatPrice } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { X, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-export const QuickViewModal = ({ product, isOpen, onClose }) => {
-  const [selectedSize, setSelectedSize] = useState('Free Size'); // Default for sarees
-  const { addToCart } = useCart();
-  const navigate = useNavigate();
-  const [added, setAdded] = useState(false);
+export const QuickViewModal = ({ item, isOpen, onClose, onAddToCart }) => {
+  if (!isOpen || !item) return null;
 
-  if (!product) return null;
-
-  const handleAddToCart = () => {
-    addToCart({ ...product, selectedOptions: { size: selectedSize }, quantity: 1 });
-    setAdded(true);
-    setTimeout(() => {
-        setAdded(false);
-        onClose();
-    }, 1500);
-  };
+  // --- FIX: Image Mapping ---
+  const image = item.featuredImageUrl || (item.imageUrls && item.imageUrls[0]) || item.image;
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-          {/* Backdrop */}
-          <motion.div 
+      <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+        <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          {/* Modal */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+            onClick={onClose} 
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" 
+        />
+        
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 10 }} 
             animate={{ opacity: 1, scale: 1, y: 0 }} 
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative bg-white w-full max-w-4xl rounded-sm shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 max-h-[90vh] md:h-auto"
-          >
-            <button onClick={onClose} className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-full hover:bg-white text-gray-500 hover:text-black transition-colors"><X size={20} /></button>
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative bg-royal-cream w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col md:flex-row rounded-sm z-10"
+        >
+            <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 bg-white/80 rounded-full hover:bg-royal-maroon hover:text-white transition-colors">
+                <X size={20} />
+            </button>
 
-            {/* Image Side */}
-            <div className="bg-gray-100 h-64 md:h-full relative group">
-                <img 
-                    src={product.featuredImageUrl} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover" 
-                />
+            <div className="w-full md:w-1/2 bg-royal-sand relative min-h-[300px]">
+                {image && <img src={image} alt={item.name} className="w-full h-full object-cover absolute inset-0" />}
             </div>
 
-            {/* Content Side */}
-            <div className="p-8 flex flex-col h-full overflow-y-auto">
-                <p className="text-[#B08D55] text-xs font-bold uppercase tracking-wider mb-2">{product.subCategory || 'Banarasi Collection'}</p>
-                <h2 className="font-serif text-3xl text-gray-900 mb-4">{product.name}</h2>
-                
-                <div className="flex items-baseline gap-3 mb-6">
-                    <span className="text-2xl font-bold text-gray-900">₹{formatPrice(product.price)}</span>
-                    {product.comparePrice > product.price && (
-                        <span className="text-sm text-gray-400 line-through">₹{formatPrice(product.comparePrice)}</span>
-                    )}
-                </div>
+            <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center text-left">
+                <span className="text-royal-gold text-[10px] font-bold uppercase tracking-[0.2em] mb-3">{item.category}</span>
+                <h2 className="font-display text-3xl text-royal-charcoal mb-4">{item.name}</h2>
+                <div className="text-2xl text-royal-maroon font-serif mb-6">₹{item.price?.toLocaleString()}</div>
+                <p className="text-royal-grey font-sans text-sm leading-relaxed mb-8">{item.fullDescription?.substring(0, 140) || item.description?.substring(0, 140)}...</p>
 
-                <div className="prose prose-sm text-gray-500 mb-8 line-clamp-3">
-                    {product.fullDescription}
-                </div>
-
-                <div className="mt-auto space-y-3">
-                    <button 
-                        onClick={handleAddToCart}
-                        disabled={product.stock <= 0}
-                        className={`w-full py-4 text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 rounded-sm ${
-                            added ? 'bg-green-600 text-white' : 'bg-[#1A1A1A] text-white hover:bg-[#B08D55]'
-                        } ${product.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        {added ? <><Check size={18} /> Added to Bag</> : <><ShoppingBag size={18} /> {product.stock <= 0 ? 'Sold Out' : 'Add to Cart'}</>}
+                <div className="space-y-4 mb-8">
+                    <button onClick={() => { onAddToCart && onAddToCart(item); onClose(); }} className="w-full py-4 bg-royal-maroon text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-royal-charcoal transition-colors">
+                        Add to Cart
                     </button>
-                    
-                    <button 
-                        onClick={() => navigate(`/product/${product.id}`)}
-                        className="w-full py-4 text-xs font-bold uppercase tracking-widest border border-gray-200 text-gray-900 hover:border-[#B08D55] hover:text-[#B08D55] transition-all rounded-sm"
-                    >
-                        View Full Details
-                    </button>
+                    <Link to={`/product/${item.id}`} className="flex items-center justify-center gap-2 w-full text-center py-4 border border-royal-charcoal text-royal-charcoal text-xs font-bold uppercase tracking-[0.2em] hover:bg-royal-charcoal hover:text-white transition-colors">
+                        View Details <ArrowRight size={14}/>
+                    </Link>
                 </div>
             </div>
-          </motion.div>
-        </div>
-      )}
+        </motion.div>
+      </div>
     </AnimatePresence>
   );
 };

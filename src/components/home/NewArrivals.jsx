@@ -1,148 +1,88 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useProducts } from '@/context/ProductContext';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-// IMPORT YOUR CUSTOM CARD
-import { ProductCard } from '@/components/shop/ProductCard'; 
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // Ensure this path matches your firebase config
+import { ProductCard } from '@/components/shop/ProductCard';
+import { useCart } from '@/context/CartContext';
+import { useFavorites } from '@/hooks/useFavorites';
 
 export const NewArrivals = () => {
-  const { fetchProducts } = useProducts();
-  const navigate = useNavigate();
-  const scrollRef = useRef(null);
-  
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [isLoading, setIsLoading] = useState(true);
-
-  const categories = ["All", "Sarees", "Lehengas", "Suits", "Dupattas"];
+  const [loading, setLoading] = useState(true);
+  
+  // Cart & Wishlist Hooks to pass to ProductCard
+  const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
-    const loadData = async () => {
+    const fetchNewest = async () => {
       try {
-        const { data } = await fetchProducts({ sortOption: 'newest', batchSize: 20 });
-        setProducts(data || []);
-        setFilteredProducts(data || []);
-      } catch (e) {
-        console.error("Failed to load new arrivals", e);
+        setLoading(true);
+        // Query: Get 4 most recently created products
+        const productsRef = collection(db, 'products');
+        const q = query(productsRef, orderBy('createdAt', 'desc'), limit(4));
+        const snapshot = await getDocs(q);
+        
+        const fetchedProducts = snapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            ...doc.data() 
+        }));
+        
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error("Error fetching new arrivals:", error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    loadData();
-  }, [fetchProducts]);
 
-  // Tab Filtering
-  useEffect(() => {
-    if (activeCategory === 'All') {
-      setFilteredProducts(products);
-    } else {
-      const lowerCat = activeCategory.toLowerCase().slice(0, -1);
-      const filtered = products.filter(p => 
-        p.category?.toLowerCase().includes(lowerCat) || 
-        p.name?.toLowerCase().includes(lowerCat)
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [activeCategory, products]);
+    fetchNewest();
+  }, []);
 
-  // Slider Logic
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const { current } = scrollRef;
-      const scrollAmount = direction === 'left' ? -300 : 300;
-      current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
+  if (loading) {
+    return (
+      <div className="py-24 flex justify-center items-center bg-royal-cream">
+        <Loader2 className="animate-spin text-royal-gold" size={32} />
+      </div>
+    );
+  }
+
+  // Hide section if no products in DB
+  if (products.length === 0) return null;
 
   return (
-    <section className="py-20 bg-white relative overflow-hidden">
-      <div className="max-w-[1800px] mx-auto px-12">
-        
-        {/* 1. HEADER & TABS */}
-        <div className="text-center mb-16 space-y-6">
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B08D55] block">
-             Just Arrived
-          </span>
-          <h2 className="font-serif text-3xl md:text-4xl text-[#1a1a1a] uppercase tracking-widest">
-            Fresh From The Loom
-          </h2>
-          
-          <div className="flex justify-center flex-wrap gap-8 text-[11px] font-bold tracking-[0.2em] uppercase text-gray-400">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`pb-2 border-b-2 transition-all duration-300 ${
-                  activeCategory === cat 
-                    ? 'text-black border-black' 
-                    : 'border-transparent hover:text-gray-600'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+    <section className="py-24 bg-royal-cream border-t border-royal-gold/10">
+      <div className="container mx-auto px-6 md:px-12">
+        {/* Header */}
+        <div className="flex justify-between items-end mb-12">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-royal-gold">Just In</span>
+            <h2 className="font-display text-4xl text-royal-charcoal mt-2">Latest Masterpieces</h2>
           </div>
+          <Link to="/shop" className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-royal-maroon hover:text-royal-charcoal transition-colors duration-200">
+            View All <ArrowRight size={16} />
+          </Link>
         </div>
 
-        {/* 2. SLIDER CONTAINER */}
-        <div className="relative group px-0 md:px-12">
-            
-            {/* Scroll Area */}
-            <div 
-              ref={scrollRef}
-              className="flex gap-4 md:gap-8 overflow-x-auto pb-12 snap-x snap-mandatory scrollbar-hide"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {isLoading ? (
-                // Loading Skeletons
-                [1,2,3,4].map(i => (
-                  <div key={i} className="min-w-[45%] md:min-w-[23%] aspect-[3/4] bg-gray-50 animate-pulse"/>
-                ))
-              ) : filteredProducts.length > 0 ? (
-                filteredProducts.map(product => (
-                  // WRAPPER DIV for Sizing
-                  // Forces the imported ProductCard to fit the slider width (23%)
-                  <div 
-                    key={product.id} 
-                    className="relative min-w-[45%] md:min-w-[23%] flex-shrink-0 snap-start"
-                  >
-                    {/* USE YOUR CUSTOM PRODUCT CARD COMPONENT HERE */}
-                    <ProductCard item={product} />
-                  </div>
-                ))
-              ) : (
-                <div className="w-full text-center py-12 text-gray-400 font-serif italic">
-                  No products found.
-                </div>
-              )}
-            </div>
-
-            {/* 3. VERTICAL BUTTONS (EKAYA STYLE) */}
-            <button 
-                onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 hidden xl:flex flex-col items-center gap-6 text-gray-300 hover:text-black transition-colors z-20 h-full justify-center w-12"
-            >
-                <span className="text-[9px] font-bold uppercase tracking-[0.3em] writing-vertical-rl rotate-180">
-                    Previous
-                </span>
-            </button>
-
-            <button 
-                onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 hidden xl:flex flex-col items-center gap-6 text-gray-300 hover:text-black transition-colors z-20 h-full justify-center w-12"
-            >
-                <span className="text-[9px] font-bold uppercase tracking-[0.3em] writing-vertical-rl">
-                    Next
-                </span>
-            </button>
-
-             {/* Mobile Arrows fallback */}
-             <div className="flex xl:hidden justify-center gap-4 -mt-4 mb-8">
-                <button onClick={() => scroll('left')} className="p-3 border border-gray-200 rounded-full hover:border-black transition-colors"><ChevronLeft size={16}/></button>
-                <button onClick={() => scroll('right')} className="p-3 border border-gray-200 rounded-full hover:border-black transition-colors"><ChevronRight size={16}/></button>
-             </div>
+        {/* Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
+          {products.map(product => (
+            <ProductCard 
+              key={product.id} 
+              item={product}
+              onAddToCart={() => addToCart({...product, quantity: 1})}
+              isFavorite={isFavorite(product.id)}
+              onToggleFavorite={toggleFavorite}
+            />
+          ))}
+        </div>
+        
+        {/* Mobile View All */}
+        <div className="mt-12 text-center md:hidden">
+            <Link to="/shop" className="inline-block border-b border-royal-maroon pb-1 text-xs font-bold uppercase tracking-widest text-royal-maroon">
+                View All Arrivals
+            </Link>
         </div>
       </div>
     </section>
